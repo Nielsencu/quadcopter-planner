@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     grid = GridMap(100,100,100)
-    grid.addObstacles(Point3D(10,10,10), radius=5)
+    grid.addObstacles(10,10,10, radius=5)
+    grid.addObstacles(10,10,50, radius=5)
     startConfig = Configuration(0,0,0)
     planner = RRTPlanner(grid)
     goalConfig = Configuration(80,80,80)
