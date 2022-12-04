@@ -65,7 +65,7 @@ class GridMap:
 class RRTPlanner:
     def __init__(self, map : GridMap, maxTimeTaken=1, goalErrorMargin=1, maxNodesExpanded=100000):
         self.map = map
-        self.GoalErrorMargin = goalErrorMargin
+        self.goalErrorMargin = goalErrorMargin
         self.maxTimeTaken = maxTimeTaken
         self.maxNodesExpanded = maxNodesExpanded
         
@@ -96,16 +96,17 @@ class RRTPlanner:
             q = Configuration(pos[0], pos[1], pos[2], yaw)
             qPrime = self.getClosestNeighbor(vertices, q)
             nodesCount +=1
+            collisionFree=False
             for conf in self.steering(qPrime, q):
                 pos = conf.pos
                 if self.map.checkCollision(pos):
-                    hasCollision = True
+                    collisionFree = True
                     break
-            if hasCollision:
+            if collisionFree:
                 continue
             vertices.add(q)
             #TODO: In the pseudocode given, add edge to the set but we can just connect two linked list together
-            if q.pos.getL2(goal.pos) <= self.errorMargin:
+            if q.pos.getL2(goal.pos) <= self.goalErrorMargin:
                 break
         #TODO: Idea is as long as goal is found, trace back the linked list and return that trajectory of configurations
         return []
