@@ -44,6 +44,7 @@ class RobotModel:
         """
         Returns discrete points representing the robot model (could be modelled as sphere)
         """
+        # TODO: Model Robot, should perform collision checking using this robot model as well
         return []
 
 class GridMap:
@@ -77,6 +78,14 @@ class GridMap:
                     if point.getL2(original) < max_l2:
                         self.flagAsOccupied(point)
                 
+class RRTStarPlanner:
+    # TODO: Extend Vanilla RRT and Implement RRTStar with rewiring
+    def __init__(self):
+        ...
+
+class InformedRRTStarPlanner:
+    def __init__(self):
+        ...
 class RRTPlanner:
     def __init__(self, map : GridMap, maxTimeTaken=10, maxNodesExpanded=100000):
         self.map = map
@@ -95,6 +104,7 @@ class RRTPlanner:
         discretizedLine = []
         DISCRETIZATION = 10
         for i in range(1,DISCRETIZATION+1):
+            # TODO: Bug as line could possibly extend longer than v vector
             x = start.x  + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[0])
             y = start.y + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[1])
             z = start.z + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[2])
@@ -103,17 +113,16 @@ class RRTPlanner:
                 break
             configuration = Configuration(x,y,z)
             if self.map.checkCollision(configuration.pos):
-                print("Oh no, will collide")
                 break
             discretizedLine.append(configuration)
         return discretizedLine
     
     def getClosestNeighbor(self, vertices: Set[Configuration], q: Configuration) -> Configuration:
-        #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
         closestVertex = None
         #TODO: Find maximum of minimum distance according to map size instead o inf
         minDist = math.inf
         for vertex in vertices:
+            #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
             dist = vertex.pos.getL2(q.pos)
             if dist < minDist and dist != 0:
                 minDist = dist
@@ -121,7 +130,6 @@ class RRTPlanner:
         return closestVertex
         
     def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
-        #TODO: Use linked list class as vertex, to efficiently find the trajectory from start to goal once found explained below
         vertices = set()
         timeStart = time.time()
         nodesCount = 0
@@ -138,20 +146,19 @@ class RRTPlanner:
             q = segment[-1]
             vertices.add(q)
             if ax is not None:
-                y = np.array([point.pos.y for point in segment])
+                # TODO: Real-time plotting? Use blit to cache background and avoid redrawing
                 x = np.array([point.pos.x for point in segment])
+                y = np.array([point.pos.y for point in segment])
                 z = np.array([point.pos.z for point in segment])
                 ax.plot(x, y, z, '-b')
-            #TODO: In the pseudocode given, add edge to the set but we can just connect two linked list together
-            path = []
             q.parent = qPrime
             if q.pos.getL2(goal.pos) > self.goalErrorMargin:
                 continue
-            path.append(q)
+            path = [q]
             while q.parent != None and q.parent.pos != start.pos:
                 path.append(q)
-                print(q.pos)
                 q = q.parent
+            path.append(q)
             if q.pos.getL2(start.pos)  < self.startErrorMargin:
                 print(f'Number of nodes expanded {nodesCount}')
                 return path
