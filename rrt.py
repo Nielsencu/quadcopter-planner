@@ -1,48 +1,63 @@
 import numpy as np
 import time
-import typing
+from typing import List, Set
+import math
+from dataclasses import dataclass
 
-class LinkedList:
-    def __init__(self, value):
-        self.value = value
-        self.parent = None
-
+CONNECTOR_LENGTH = 10
+@dataclass
 class Point3D:
-    def __init__(self, x, y, z):
-        self.x=x
-        self.y=y
-        self.z=z
+    x : int
+    y : int
+    z : int
+
+    def __str__(self):
+        return f'{self.x, self.y, self.z}'
         
     def getL2(self, p1) -> float:
         return (p1.x - self.x) ** 2 + (p1.y - self.y) ** 2 + (p1.z - self.z) ** 2
+    
+    def __sub__(self,other):
+        return Point3D(self.x-other.x, self.y-other.y, self.z-other.z)
+    
+    def __add__(self,other):
+        return Point3D(self.x+other.x, self.y+other.y, self.z+other.z)
 
 class Configuration:
     def __init__(self, x, y, z, yaw=0):
         self.pos = Point3D(x,y,z)
         self.yaw = yaw
+        self.parent = None
+
+    @staticmethod
+    def getRandomConfiguration():
+        # Sample X,Y,Z space TODO:Change hardcoding of low and high 
+        pos = np.random.randint(low=0,high=99, size=3) 
+        yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+        return Configuration(pos[0], pos[1], pos[2], yaw)
         
 class RobotModel:
     def __init__(self, radius=5):
         self.radius = radius
         
-    def getDiscretizedRepresentation(self) -> list[Point3D]:
+    def getDiscretizedRepresentation(self) -> List[Point3D]:
         """
         Returns discrete points representing the robot model (could be modelled as sphere)
         """
         return []
 
 class GridMap:
-    def __init__(self, width, height, depth):
-        self.map=np.array([[[0 for _ in range(depth)] for _ in range(width)] for _ in range(height)])
+    def __init__(self, xMax, yMax, zMax):
+        self.map=np.array([[[0 for _ in range(xMax)] for _ in range(yMax)] for _ in range(zMax)])
         
     def getMap(self):
         return self.map
     
     def checkCollision(self, point: Point3D) -> bool:
-        return self.map[point.x][point.y][point.z] == 1
+        return self.map[point.x, point.y, point.z] == 1
         
     def flagAsOccupied(self, point: Point3D):
-        self.map[point.x][point.y][point.z] = 1
+        self.map[point.x, point.y, point.z] = 1
         
     def addObstacles(self, x, y, z, radius=1):
         point = Point3D(x,y,z)
@@ -63,50 +78,82 @@ class GridMap:
                         self.flagAsOccupied(point)
                 
 class RRTPlanner:
-    def __init__(self, map : GridMap, maxTimeTaken=1, goalErrorMargin=1, maxNodesExpanded=100000):
+    def __init__(self, map : GridMap, maxTimeTaken=10, maxNodesExpanded=100000):
         self.map = map
-        self.goalErrorMargin = goalErrorMargin
         self.maxTimeTaken = maxTimeTaken
+        # TODO: Bug when error margin is 75, won't find path
+        self.startErrorMargin = 1 * (10 ** 2)
+        self.goalErrorMargin = 1 * (10 ** 2)
         self.maxNodesExpanded = maxNodesExpanded
+        print(f'Initialized RRT Planner with\nstartErrorMargin {self.startErrorMargin}\ngoalErrorMargin {self.goalErrorMargin}\nmaxTimeTaken {self.maxTimeTaken}\nmaxNodesExpanded {self.maxNodesExpanded}')
         
-    def steering(self, q1 : Configuration, q2: Configuration) -> list[Configuration]:
-        #TODO: Implement steering between two configurations
-        return []
+    def steering(self, q1 : Configuration, q2: Configuration) -> List[Configuration]:
+        v = q2.pos - q1.pos
+        vmag = (v.x**2 + v.y**2 + v.z**2)**0.5
+        u = [v.x / vmag, v.y/ vmag, v.z / vmag]
+        start = q1.pos
+        discretizedLine = []
+        DISCRETIZATION = 10
+        for i in range(1,DISCRETIZATION+1):
+            x = start.x  + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[0])
+            y = start.y + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[1])
+            z = start.z + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[2])
+            # TODO: Check line if goes out of bounds of map
+            if x >= 100 or y >= 100 or z >= 100:
+                break
+            configuration = Configuration(x,y,z)
+            if self.map.checkCollision(configuration.pos):
+                print("Oh no, will collide")
+                break
+            discretizedLine.append(configuration)
+        return discretizedLine
     
-    def getClosestNeighbor(self, vertices: set[Configuration], q: Configuration) -> Configuration:
+    def getClosestNeighbor(self, vertices: Set[Configuration], q: Configuration) -> Configuration:
         #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
         closestVertex = None
-        #TODO: Find maximum minimum distance according to map size
-        minDist = 100000
+        #TODO: Find maximum of minimum distance according to map size instead o inf
+        minDist = math.inf
         for vertex in vertices:
             dist = vertex.pos.getL2(q.pos)
-            if dist < minDist:
+            if dist < minDist and dist != 0:
                 minDist = dist
                 closestVertex=vertex
         return closestVertex
         
-    def getTrajectory(self, start: Configuration, goal: Configuration) -> list[Configuration]:
+    def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
         #TODO: Use linked list class as vertex, to efficiently find the trajectory from start to goal once found explained below
         vertices = set()
-        start = time.time()
+        timeStart = time.time()
         nodesCount = 0
-        while time.time() - start < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
-            pos = np.random.random_integers(low=0,high=100, size=(3,1)) # Sample X,Y,Z space TODO:Change hardcoding of low and high 
-            yaw = np.random.random_integers(low=0, high=180) # Sample yaw from 0 to pi
-            q = Configuration(pos[0], pos[1], pos[2], yaw)
-            qPrime = self.getClosestNeighbor(vertices, q)
+        vertices.add(start)
+        while time.time() - timeStart < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
+            q = Configuration.getRandomConfiguration()
             nodesCount +=1
-            collisionFree=False
-            for conf in self.steering(qPrime, q):
-                pos = conf.pos
-                if self.map.checkCollision(pos):
-                    collisionFree = True
-                    break
-            if collisionFree:
+            if self.map.checkCollision(q.pos):
                 continue
+            qPrime = self.getClosestNeighbor(vertices, q)
+            segment = self.steering(qPrime, q)
+            if not segment:
+                continue
+            q = segment[-1]
             vertices.add(q)
+            if ax is not None:
+                y = np.array([point.pos.y for point in segment])
+                x = np.array([point.pos.x for point in segment])
+                z = np.array([point.pos.z for point in segment])
+                ax.plot(x, y, z, '-b')
             #TODO: In the pseudocode given, add edge to the set but we can just connect two linked list together
-            if q.pos.getL2(goal.pos) <= self.goalErrorMargin:
-                break
-        #TODO: Idea is as long as goal is found, trace back the linked list and return that trajectory of configurations
+            path = []
+            q.parent = qPrime
+            if q.pos.getL2(goal.pos) > self.goalErrorMargin:
+                continue
+            path.append(q)
+            while q.parent != None and q.parent.pos != start.pos:
+                path.append(q)
+                print(q.pos)
+                q = q.parent
+            if q.pos.getL2(start.pos)  < self.startErrorMargin:
+                print(f'Number of nodes expanded {nodesCount}')
+                return path
+        print("Failed to find path")
         return []
