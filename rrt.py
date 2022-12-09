@@ -4,7 +4,7 @@ from typing import List, Set
 import math
 from dataclasses import dataclass
 
-CONNECTOR_LENGTH = 10
+CONNECTOR_LENGTH = 5
 @dataclass
 class Point3D:
     x : int
@@ -17,11 +17,20 @@ class Point3D:
     def getL2(self, p1) -> float:
         return (p1.x - self.x) ** 2 + (p1.y - self.y) ** 2 + (p1.z - self.z) ** 2
     
+    def getMag(self):
+        return (self.x ** 2 + self.y ** 2 + self.z ** 2) ** 0.5
+    
     def __sub__(self,other):
         return Point3D(self.x-other.x, self.y-other.y, self.z-other.z)
     
     def __add__(self,other):
         return Point3D(self.x+other.x, self.y+other.y, self.z+other.z)
+    
+    def __truediv__(self, other):
+        return Point3D(self.x / other, self.y / other, self.z / other)
+    
+    def __rtruediv__(self, other):
+        return Point3D(other / self.x, other / self.y, other / self.z)
 
 class Configuration:
     def __init__(self, x, y, z, yaw=0):
@@ -50,9 +59,15 @@ class RobotModel:
 class GridMap:
     def __init__(self, xMax, yMax, zMax):
         self.map=np.array([[[0 for _ in range(xMax)] for _ in range(yMax)] for _ in range(zMax)])
+        self.xMax = xMax
+        self.yMax = yMax
+        self.zMax = zMax
         
     def getMap(self):
         return self.map
+    
+    def isOutOfBounds(self, point: Point3D):
+        return not(0 <= point.x < self.xMax and 0 <= point.y < self.yMax and 0 <= point.z < self.zMax)
     
     def checkCollision(self, point: Point3D) -> bool:
         return self.map[point.x, point.y, point.z] == 1
@@ -87,32 +102,29 @@ class InformedRRTStarPlanner:
     def __init__(self):
         ...
 class RRTPlanner:
-    def __init__(self, map : GridMap, maxTimeTaken=10, maxNodesExpanded=100000):
+    def __init__(self, map : GridMap, maxTimeTaken=2, maxNodesExpanded=10000):
         self.map = map
         self.maxTimeTaken = maxTimeTaken
         # TODO: Bug when error margin is 75, won't find path
-        self.startErrorMargin = 1 * (10 ** 2)
-        self.goalErrorMargin = 1 * (10 ** 2)
+        self.startErrorMargin = 3 * (5**2)
+        self.goalErrorMargin = 3 * (5**2)
         self.maxNodesExpanded = maxNodesExpanded
         print(f'Initialized RRT Planner with\nstartErrorMargin {self.startErrorMargin}\ngoalErrorMargin {self.goalErrorMargin}\nmaxTimeTaken {self.maxTimeTaken}\nmaxNodesExpanded {self.maxNodesExpanded}')
         
     def steering(self, q1 : Configuration, q2: Configuration) -> List[Configuration]:
         v = q2.pos - q1.pos
-        vmag = (v.x**2 + v.y**2 + v.z**2)**0.5
-        u = [v.x / vmag, v.y/ vmag, v.z / vmag]
+        vMag = v.getMag()
+        u = v / vMag
         start = q1.pos
         discretizedLine = []
         DISCRETIZATION = 10
-        for i in range(1,DISCRETIZATION+1):
-            # TODO: Bug as line could possibly extend longer than v vector
-            x = start.x  + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[0])
-            y = start.y + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[1])
-            z = start.z + int((i/DISCRETIZATION) * CONNECTOR_LENGTH * u[2])
-            # TODO: Check line if goes out of bounds of map
-            if x >= 100 or y >= 100 or z >= 100:
-                break
+        for l in np.linspace(0,1,DISCRETIZATION,endpoint=True):
+            segmentLength = min(vMag, CONNECTOR_LENGTH)
+            x = start.x  + int(l * segmentLength * u.x)
+            y = start.y + int(l * segmentLength * u.y)
+            z = start.z + int(l * segmentLength * u.z)
             configuration = Configuration(x,y,z)
-            if self.map.checkCollision(configuration.pos):
+            if self.map.isOutOfBounds(configuration.pos) or self.map.checkCollision(configuration.pos):
                 break
             discretizedLine.append(configuration)
         return discretizedLine
@@ -154,13 +166,13 @@ class RRTPlanner:
             q.parent = qPrime
             if q.pos.getL2(goal.pos) > self.goalErrorMargin:
                 continue
-            path = [q]
+            path = []
             while q.parent != None and q.parent.pos != start.pos:
                 path.append(q)
                 q = q.parent
             path.append(q)
             if q.pos.getL2(start.pos)  < self.startErrorMargin:
-                print(f'Number of nodes expanded {nodesCount}')
+                print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
                 return path
         print("Failed to find path")
         return []
