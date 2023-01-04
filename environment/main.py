@@ -18,8 +18,8 @@ import pybullet as p
 from utils.enums import DroneModel, Physics
 from envs.CtrlAviary import CtrlAviary
 from envs.VisionAviary import VisionAviary
-from control.DSLPIDControl import DSLPIDControl
-from control.SimplePIDControl import SimplePIDControl
+from Control.DSLPIDControl import DSLPIDControl
+from Control.SimplePIDControl import SimplePIDControl
 from utils.Logger import Logger
 from utils.utils import sync, str2bool
 
