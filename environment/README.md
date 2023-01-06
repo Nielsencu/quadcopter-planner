@@ -1,1 +1,0 @@
-### Adapted from gym-pybullet-drones

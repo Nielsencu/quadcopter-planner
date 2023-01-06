@@ -4,9 +4,9 @@ import numpy as np
 
 if __name__ == "__main__":
     grid = GridMap(100,100,100)
-    grid.addObstacles(25,25,25, radius=5)
-    grid.addObstacles(70,70,70, radius=5)
-    grid.addObstacles(50,50,50, radius=5)
+    grid.addObstacles(25,25,25, radius=10)
+    grid.addObstacles(70,70,70, radius=10)
+    grid.addObstacles(50,50,50, radius=10)
     startConfig = Configuration(0,0,0)
     planner = RRTPlanner(grid)
     goalConfig = Configuration(80,80,80, np.pi)
