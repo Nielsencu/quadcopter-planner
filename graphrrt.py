@@ -3,6 +3,7 @@ import time
 from typing import List, Set
 import math
 from dataclasses import dataclass
+from graph import Graph
 
 CONNECTOR_LENGTH = 5
 @dataclass
@@ -33,15 +34,22 @@ class Point3D:
         return Point3D(other / self.x, other / self.y, other / self.z)
 
 class Configuration:
-    def __init__(self, x, y, z, yaw=0):
+    def __init__(self, x, y, z, yaw=0.):
         self.pos = Point3D(x,y,z)
         self.yaw = yaw
-        self.parent = None
+
+    def __hash__(self):
+        return hash((self.pos.x, self.pos.y, self.pos.z, self.yaw))
+
+    def __str__(self):
+        return f'Position {self.pos} yaw {self.yaw}'
+
+    def getError(self, other):
+        return self.pos.getL2(other.pos) + min(abs(self.yaw - other.yaw), 2 * math.pi * abs(self.yaw - other.yaw)) ** 2
 
     @staticmethod
-    def getRandomConfiguration():
-        # Sample X,Y,Z space TODO:Change hardcoding of low and high 
-        pos = np.random.randint(low=0,high=99, size=3) 
+    def getRandomConfiguration(lowBound, highBound):
+        pos = np.random.randint(low=lowBound,high=highBound, size=3) 
         yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
         return Configuration(pos[0], pos[1], pos[2], yaw)
         
@@ -105,72 +113,69 @@ class RRTPlanner:
     def __init__(self, map : GridMap, maxTimeTaken=10, maxNodesExpanded=10000):
         self.map = map
         self.maxTimeTaken = maxTimeTaken
-        # TODO: Bug when error margin is 75, won't find path
-        self.startErrorMargin = 2 * (5**2)
-        self.goalErrorMargin = 2 * (5**2)
+        # TODO: Bug when error margin is too small, takes too long to find solution.
+        self.startErrorMargin = 3 * (5**2)
+        self.goalErrorMargin = 3 * (5**2)
         self.maxNodesExpanded = maxNodesExpanded
         print(f'Initialized RRT Planner with\nstartErrorMargin {self.startErrorMargin}\ngoalErrorMargin {self.goalErrorMargin}\nmaxTimeTaken {self.maxTimeTaken}\nmaxNodesExpanded {self.maxNodesExpanded}')
         
     def steering(self, q1 : Configuration, q2: Configuration) -> List[Configuration]:
         v = q2.pos - q1.pos
         vMag = v.getMag()
+        if vMag == 0:
+            return []
         u = v / vMag
         start = q1.pos
         discretizedLine = []
         DISCRETIZATION = 10
-        for l in np.linspace(0,1,DISCRETIZATION,endpoint=True):
-            segmentLength = min(vMag, CONNECTOR_LENGTH)
-            x = start.x  + int(l * segmentLength * u.x)
-            y = start.y + int(l * segmentLength * u.y)
-            z = start.z + int(l * segmentLength * u.z)
+        segmentLength = min(vMag, CONNECTOR_LENGTH)
+        for progress in np.linspace(0,segmentLength,DISCRETIZATION,endpoint=True):
+            x = start.x  + int(progress * u.x)
+            y = start.y + int(progress * u.y)
+            z = start.z + int(progress * u.z)
             configuration = Configuration(x,y,z)
             if self.map.isOutOfBounds(configuration.pos) or self.map.checkCollision(configuration.pos):
                 break
             discretizedLine.append(configuration)
         return discretizedLine
     
-    def getClosestNeighbor(self, vertices: Set[Configuration], q: Configuration) -> Configuration:
+    def getClosestNeighbor(self, graph : Graph, q: Configuration) -> Configuration:
         closestVertex = None
-        #TODO: Find maximum of minimum distance according to map size instead o inf
         minDist = math.inf
-        for vertex in vertices:
-            #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
-            dist = vertex.pos.getL2(q.pos)
+        for vertex in graph.vertices:
+            dist = vertex.getError(q)
             if dist < minDist and dist != 0:
                 minDist = dist
                 closestVertex=vertex
         return closestVertex
         
     def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
-        vertices = set()
         timeStart = time.time()
         nodesCount = 0
-        vertices.add(start)
+        graph = Graph()
+        graph.addVertex(start)
         while time.time() - timeStart < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
-            q = Configuration.getRandomConfiguration()
+            q = Configuration.getRandomConfiguration(lowBound=0, highBound=self.map.xMax)
             nodesCount +=1
             if self.map.checkCollision(q.pos):
                 continue
-            qPrime = self.getClosestNeighbor(vertices, q)
+            qPrime = self.getClosestNeighbor(graph, q)
             segment = self.steering(qPrime, q)
             if not segment:
                 continue
             q = segment[-1]
-            vertices.add(q)
+            graph.addVertex(q)
             if ax is not None:
                 # TODO: Real-time plotting? Use blit to cache background and avoid redrawing
                 x = np.array([point.pos.x for point in segment])
                 y = np.array([point.pos.y for point in segment])
                 z = np.array([point.pos.z for point in segment])
                 ax.plot(x, y, z, '-b')
-            q.parent = qPrime
-            if q.pos.getL2(goal.pos) < self.goalErrorMargin:
-                path = []
-                while q.parent != None and q.parent.pos != start.pos:
-                    path.append(q)
-                    q = q.parent
-                path.append(q)
+            graph.addLink(qPrime, q)
+            err = q.getError(goal)
+            if err < self.goalErrorMargin:
+                print(f"Found good enough end configuration {q} with error {err}")
                 print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
-                return path
+                return graph.getPath(start, q)
         print("Failed to find path")
         return []

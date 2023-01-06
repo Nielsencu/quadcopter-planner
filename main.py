@@ -1,4 +1,4 @@
-from rrt import RRTPlanner, GridMap, Configuration, Point3D
+from graphrrt import RRTPlanner, GridMap, Configuration
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,7 +9,7 @@ if __name__ == "__main__":
     grid.addObstacles(50,50,50, radius=5)
     startConfig = Configuration(0,0,0)
     planner = RRTPlanner(grid)
-    goalConfig = Configuration(80,80,80)
+    goalConfig = Configuration(80,80,80, np.pi)
     ax = plt.axes(projection='3d')
     x, y, z = grid.getMap().nonzero()
     ax.scatter(x,y,z,c=z, alpha=1)
@@ -19,5 +19,5 @@ if __name__ == "__main__":
         x = np.array([point.pos.x for point in traj])
         z = np.array([point.pos.z for point in traj])
         ax.plot(x, y, z, '-r')
-    print(f'Trajectory generated is:\n{[conf.pos for conf in traj]}')
+    #print(f'Trajectory generated is:\n{[conf.pos for conf in traj]}')
     plt.show()
