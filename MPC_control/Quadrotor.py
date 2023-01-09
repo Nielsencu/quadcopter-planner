@@ -59,45 +59,49 @@ class Quadrotor(core.Env):
         self.weight = np.array([0, 0, -self.mass*self.g])
         self.t_step = 0.01
         
-    def ss_system(self, dt):
-        s = 12 #number of states: 
-        #x, y, z, dx, dy, dz, psi, theta, phi, psi_dot, phi_dot, theta_dot
+    # def system_d(self, dt):
+    #     s = 12 #number of states: 
+    #     #s = {x, y, z, dx, dy, dz, psi, theta, phi, psi_dot, phi_dot, theta_dot}
         
-        u = 4 #number of inputs
+    #     u = 4 #number of inputs
         
-        #A_c: s_dot x s
-        A_c = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],       # dx
-                        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],        # dy
-                        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],        # dz
-                        [0, 0, 0, 0, 0, 0, 0, self.g, 0, 0, 0, 0],   #ddx
-                        [0, 0, 0, 0, 0, 0, (-self.g), 0, 0, 0, 0, 0],#ddy
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        #ddz
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],        #psi_dot
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],        #phi_dot
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],        #theta_dot
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        #psi_ddot
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        #phi_ddot
-                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ])     #theta_ddot
+    #     #A_c: s_dot x s
+    #     A_c = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],       
+    #                     [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],        
+    #                     [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],        
+    #                     [0, 0, 0, 0, 0, 0, 0, self.g, 0, 0, 0, 0],   
+    #                     [0, 0, 0, 0, 0, 0, (-self.g), 0, 0, 0, 0, 0],
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],        
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],        
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],        
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        
+    #                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ])     
         
-        B_c = np.array([[0, 0, 0, 0],           #dx
-                        [0, 0, 0, 0],            #dy
-                        [0, 0, 0, 0],            #dz
-                        [0, 0, 0, 0],            #ddx
-                        [0, 0, 0, 0],            #ddy
-                        [1/self.mass, 0, 0, 0],  #ddz 
-                        [0, 0, 0, 0],            #psi_dot
-                        [0, 0, 0, 0],            #phi_dot
-                        [0, 0, 0, 0],            #theta_dot
-                        [0, 1/self.Ixx, 0, 0],   #psi_ddot
-                        [0, 0, 1/self.Iyy, 0],   #phi_ddot
-                        [0, 0, 0, 1/self.Izz]])  #theta_ddot
+    #     B_c = np.array([[0, 0, 0, 0],           
+    #                     [0, 0, 0, 0],            
+    #                     [0, 0, 0, 0],            
+    #                     [0, 0, 0, 0],
+    #                     [0, 0, 0, 0],            
+    #                     [1/self.mass, 0, 0, 0],  
+    #                     [0, 0, 0, 0],
+    #                     [0, 0, 0, 0],            
+    #                     [0, 0, 0, 0],            
+    #                     [0, 1/self.Ixx, 0, 0],
+    #                     [0, 0, 1/self.Iyy, 0],   
+    #                     [0, 0, 0, 1/self.Izz]])  
         
-        C_c = np.identity(s)
-        D_c = np.zeros((1,u))
-        sys_ss = control.ss(A_c, B_c, C_c, D_c)
-        # Discretization
-        sys_ss_d = control.sample_system(sys_ss, dt, method='bilinear')
-        return sys_ss_d.A, sys_ss_d.B
+    #     C_c = np.identity(s)
+    #     D_c = np.zeros((1,u))
+    #     #continuous (_c)
+    #     sys_ss = control.ss(A_c, B_c, C_c, D_c)
+        
+    #     # Discretized (_d)
+    #     sys_ss_d = control.sample_system(sys_ss, dt, method='bilinear')
+    #     A_d = sys_ss_d.A
+    #     B_d = sys_ss_d.B
+    #     return A_d, B_d
     
     def reset(self, position=[0, 0, 0], yaw =0, pitch=0, roll=0):
         '''

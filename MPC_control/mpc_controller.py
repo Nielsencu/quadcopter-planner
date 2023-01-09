@@ -27,26 +27,66 @@ class MPCController:
         self.k_thrust = 2.3e-08
         self.k_drag = 7.8e-11
    
-    def control(self, des_state, state, x0, A, B, A_obs, B_obs):
+    def mpccontrol(self, des_state, state): #A_obs, B_obs, , x0
+       s = 12 #number of states: 
+       #s = {x, y, z, dx, dy, dz, psi, theta, phi, psi_dot, phi_dot, theta_dot}
        
-       x_error = state.get('x') - des_state.get('x')
-       des_state = x_target
+       u = 4 #number of inputs
+       
+       #A_c: s_dot x s
+       A_c = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],       
+                       [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],        
+                       [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],        
+                       [0, 0, 0, 0, 0, 0, 0, self.g, 0, 0, 0, 0],   
+                       [0, 0, 0, 0, 0, 0, (-self.g), 0, 0, 0, 0, 0],
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],        
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],        
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],        
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],        
+                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ])     
+       
+       B_c = np.array([[0, 0, 0, 0],           
+                       [0, 0, 0, 0],            
+                       [0, 0, 0, 0],            
+                       [0, 0, 0, 0],
+                       [0, 0, 0, 0],            
+                       [1/self.mass, 0, 0, 0],  
+                       [0, 0, 0, 0],
+                       [0, 0, 0, 0],            
+                       [0, 0, 0, 0],            
+                       [0, 1/self.Ixx, 0, 0],
+                       [0, 0, 1/self.Iyy, 0],   
+                       [0, 0, 0, 1/self.Izz]])  
+       
+       C_c = np.identity(s)
+       D_c = np.zeros((1,u))
+       #continuous (_c)
+       sys_ss = control.ss(A_c, B_c, C_c, D_c)
+       
+       # Discretized (_d)
+       sys_ss_d = control.sample_system(sys_ss, self.dt, method='bilinear')
+       A_d = sys_ss_d.A
+       B_d = sys_ss_d.B
+       
+       x_error = state - des_state
        
        n, m = self.Q.shape[0], self.R.shape[0]
-       x_cp = cp.Variable((N + 1, n))
-       u_cp = cp.Variable((N, m))
+       x_cp = cp.Variable((self.N + 1, n))
+       u_cp = cp.Variable((self.N, m))
        
        cost = 0.
        constraints = []
        
-       constraints += [x_cp[:,0] == x0.flatten()] #Initial state
+       #constraints += [x_cp[:,0] == x0.flatten()] #Initial state
        
-       for i in range(N+1):
-           cost += cp.quad_form(x_cp[:,i] - x_target, self.Q) #add state cost
-           cost += cp.quad_form(u_cp[:,i] - u_target, self.R) #add control cost
+       for i in range(self.N+1):
+           cost += cp.quad_form(x_cp[:,i] - des_state, self.Q) #add state cost
+           cost += cp.quad_form(u_cp[:,i], self.R) #add control cost
            
-           constraints += [A_obs @ x_cp[:2,i] <= B_obs.flatten()] #Obstacle avoidance
-           constraints += [x[:,i]] == A@x_cp[:,i] + B@x_cp[:,i]
+           #constraints += [A_obs @ x_cp[:2,i] <= B_obs.flatten()] #Obstacle avoidance
+           constraints += [x_cp[:,i]] == A_d@x_cp[:,i] + B_d@x_cp[:,i]
            # constraints += [x_cp[6,i] <= 0.5]
            # constraints += [x_cp[7,i] <= 0.5]
            # constraints += [x_cp[6,i] >= -0.5]
@@ -54,9 +94,9 @@ class MPCController:
            # constraints += [u_cp[:,i] >= -0.07*30]
            # constraints += [u_cp[:,i] <= 0.07*30]
            
-       cost += cp.quad_form((x_cp[:,N]-x_target), self.P) #add terminal cost
+       #cost += cp.quad_form((x_cp[:,N]-x_target), self.P) #add terminal cost
        
-       prob = cp.Problem(cvx.Minimize(cost), constraints)
+       prob = cp.Problem(cp.Minimize(cost), constraints)
        prob.solve()
        x = x_cp.value
        u = u_cp.value

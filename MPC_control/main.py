@@ -2,7 +2,7 @@ import gym
 from linear_controller import LinearPDController
 from nonlinear_controller import NonLinearPDController
 #from mpc_controller import MPCController
-from envs.Quadrotor import Quadrotor
+from Quadrotor import Quadrotor
 from trajectory import *
 from matplotlib import pyplot as plt
 from collections import deque
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     LINEAR = 1
 
     traj = DIAMOND
-    controller = NONLINEAR
+    controller = MPC
     if traj == CIRCLE:
         T=9
         trajectory = CircleTrajectory(dt, radius=5, end_z=2.5, T=T)
