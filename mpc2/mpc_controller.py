@@ -42,37 +42,38 @@ class MPCController:
        
        x_error = state.get('x') - des_state.get('x')
        
-       x0 = state2x(self,(TUDTrajectory.getDesState(self, t= 0)))
-      
+       #x0 = state2x(self,(TUDTrajectory.getDesState(self, t= 0)))
+       x0 = np.zeros(s)
+       print('x0_initial_state', x0)
        n, m = self.Q.shape[0], self.R.shape[0]
        x_cp = cp.Variable((n, self.N+1))
        u_cp = cp.Variable((m, self.N))
        #u_target = np.array([self.mass*self.g, 0, 0, 0])
        cost = 0.
-       constraints = []
+       #constraints = []
        x_target = []
-       
+       constraints = [x_cp[:,0] == x0] #Initial state
        for i in range(self.N):
            # if k == self.N: -----> terminal cost with terminal set
            #     cost += cp.quad_form(x[:, self.N]-x_ref_k, self.P)
            t = i*self.dt
            x_target = (state2x(self, TUDTrajectory.getDesState(self, t)))
-           
+           print('this is x_target', x_target.shape)
            if i > 0:
                cost += cp.quad_form(x_cp[:,i] - x_target, self.Q) #add state cost #state.get(all) - des_state.gett(all)
            
            cost += cp.quad_form(u_cp[:,i], self.R) #add control cost '- u_target'
            
-           constraints += [[x_cp[:,i]] == Quadrotor().Ad@x_cp[:,i] + Quadrotor().Bd@u_cp[:,i]]
+           constraints += [x_cp[:,i] == Quadrotor().Ad@x_cp[:,i] + Quadrotor().Bd@u_cp[:,i]]
            
-           constraints += [Quadrotor().Hx@x_cp[:,i] <= Quadrotor().h1[Quadrotor().Hu1.shape[0]:]]
-           constraints += [Quadrotor().Hu1@x_cp] <= Quadrotor().h1[:Quadrotor().Hu1.shape[0]]
+           constraints += [Quadrotor().Hx@x_cp[:,i] <= Quadrotor().h1[Quadrotor().Hu1.shape[0]:].squeeze()]
+           constraints += [Quadrotor().Hu1@u_cp[:,i] <= Quadrotor().h1[:Quadrotor().Hu1.shape[0]].squeeze()]
            #constraints += [A_obs@x_cp[:,i+1] <= B_obs] #Obstacle avoidance
     
-       constraints += [x_cp[:,0] == x0] #Initial state
+       
        cost += self.Q*(x_cp[0,self.N] - x_target)**2
        
-       prob = cp.Problem(cp.Minimize(cost), constraints)
+       prob = cp.Problem(cp.Minimize(cost), np.array(constraints))
        prob.solve()
        x = x_cp.value
        u = u_cp.value
@@ -118,6 +119,8 @@ def state2x(self, state):
             euler_ang = np.zeros(3)
             euler_ang[2] = state.get('yaw')
             w = np.zeros(3)
+            w[0] = state.get('phi_dot')
+            w[1] = state.get('theta_dot')
             w[2] = state.get('yaw_dot')
 
         x_init = np.block([x, v, euler_ang, w])

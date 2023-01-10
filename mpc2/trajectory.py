@@ -21,6 +21,7 @@ class Trajectory:
 
     def pack_state_as_dict(self, pos, vel, acc, yaw, yaw_dot):
         return {'x' : pos, 'x_dot' : vel, 'x_ddot' : acc, 'yaw' : yaw, 'yaw_dot' : yaw_dot}
+                # 3 + 3 + 3 + 1 + 1
 
 
 class HoverTrajectory(Trajectory):
