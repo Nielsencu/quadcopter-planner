@@ -1,9 +1,24 @@
 # -*- coding: utf-8 -*-
 """
+Created on Mon Jan  9 11:58:37 2023
+
+@author: Bas
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Jan  4 15:24:25 2023
 
 @author: Bas
 """
+# ellipsoid is defined by best cost solution so far and minimim cost solution in theory
+#cbest is height of ellips, cmin is distance between midpoint things and 
+# sqrt (cbestbsqr - cminsqr) is the height thing
+#limit new found samples in this ellipse and you are done
+# Je kan gewoon bounds bepalen van xmax en xmin en ymax en ymin
+# current ellipsoid sum can be determined by using xmin point then with 
+# getrandom configuration make sure sum of foci smaller than value calculated above 
+
 
 import numpy as np
 import time
@@ -48,12 +63,41 @@ class Configuration:
         
 
     @staticmethod
-    def getRandomConfiguration():
+    def getBoundedConfiguration(self, start: Configuration, goal: Configuration, path, path_len_min, CurrentShortestPath) -> List[Configuration]: 
         # Sample X,Y,Z space TODO:Change hardcoding of low and high 
-        pos = np.random.randint(low=0,high=99, size=3) 
-        yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
-        cost = 0 
-        return Configuration(pos[0], pos[1], pos[2], cost, yaw)
+        if path: #make sure it only ellipsoidal bounds its search after a path has been found
+                 #rejection sampling 
+            
+            ellipsbound = (path_len_min-CurrentShortestPath) + ((path_len_min-CurrentShortestPath)+path_len_min) 
+            
+            #dummy configuration for initiating the search
+            max_x = np.random.randint(low=math.inf,high =math.inf)
+            max_y = np.random.randint(low=math.inf,high =math.inf)
+            max_z = np.random.randint(low=math.inf,high =math.inf)
+            max_yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+            max_cost = 0 
+            
+            found_point = Configuration(max_x, max_y, max_z, max_cost, max_yaw)
+            
+            
+            while start.pos.getL2(found_point.pos) + start.pos.getL2(found_point.pos) > ellipsbound:
+                
+                
+                pos_x = np.random.randint(low=0,high=99)
+                pos_y = np.random.randint(low=0,high=99)
+                pos_z = np.random.randint(low=0,high=99)
+                yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+                cost = 0 
+                 
+                found_point = Configuration(pos_x, pos_y, pos_z, cost, yaw)
+        else:
+            pos_x = np.random.randint(low=0,high=99)
+            pos_y = np.random.randint(low=0,high=99)
+            pos_z = np.random.randint(low=0,high=99) 
+            yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+            cost = 0 
+            
+        return Configuration(pos_x, pos_y, pos_z, cost, yaw)
         
 class RobotModel:
     def __init__(self, radius=5):
@@ -103,14 +147,6 @@ class GridMap:
                     if point.getL2(original) < max_l2:
                         self.flagAsOccupied(point)
                 
-class RRTStarPlanner:
-    # TODO: Extend Vanilla RRT and Implement RRTStar with rewiring
-    def __init__(self):
-        ...
-
-class InformedRRTStarPlanner:
-    def __init__(self):
-        ...
 class RRTPlanner:
     def __init__(self, map : GridMap, maxTimeTaken=2, maxNodesExpanded=10000):
         self.map = map
@@ -145,10 +181,6 @@ class RRTPlanner:
         minDist = 5 # radius
         for vertex in vertices:
             #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
-            # check neighbors within radius of the new point and check which one has 
-            #the shortest total cost and choose that one as new vertex
-            #This means you will have to keep track of the total cost to get to each vertex
-            # This can maybe be done in the similar way of the .parent but then .cost
             dist = vertex.pos.getL2(q.pos)
             minCost = math.inf
             if dist < minDist and dist != 0 and vertex.cost < minCost:
@@ -156,15 +188,31 @@ class RRTPlanner:
                 lowestcostvertex = vertex
    
         return lowestcostvertex
+    
+    def GetCurrentShortestPath(path, PreviousShortestPath):
+            
+        current_path_len = 0
+        
+        for i in range(len(path)):
+                current_path_len +=  path[i].pos.getL2(path[i+1].pos) 
+                if current_path_len < PreviousShortestPath:
+                    CurrentShortestPath = current_path_len
+                else:
+                    CurrentShortestPath = PreviousShortestPath
+                    
+        return CurrentShortestPath
         
     def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
         vertices = set()
         timeStart = time.time()
         nodesCount = 0
         vertices.add(start)
+        path_len_min = goal.pos.getL2(start.pos)
         start.cost = 0
+        path = []
+        CurrentShortestPath = 0
         while time.time() - timeStart < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
-            q = Configuration.getRandomConfiguration()
+            q = Configuration.getBoundedConfiguration(start, goal, path,path_len_min, CurrentShortestPath)
             nodesCount +=1
             if self.map.checkCollision(q.pos):
                 continue
@@ -183,26 +231,27 @@ class RRTPlanner:
             q.parent = qPrime
             q.cost = qPrime.cost +  qPrime.pos.getL2(q.pos)
             
-            #here comes the rewiring
+            #RRT_star rewiring
+            
             minDist = math.inf
             for vertex in vertices:
                  dist = vertex.pos.getL2(q.pos)
                  if dist < minDist and dist != 0 and q.cost + dist < vertex.cost:
                     vertex.parent = q
                     
-                    #rrt_star must still be adjusted so it doesnt stop searching after 
-                    # it finds a configuration
-                    
             if q.pos.getL2(goal.pos) > self.goalErrorMargin:
                 continue
-            path = []
             while q.parent != None and q.parent.pos != start.pos:
                 path.append(q)
                 q = q.parent
             path.append(q)
             if q.pos.getL2(start.pos)  < self.startErrorMargin:
+                PreviousShortestPath = CurrentShortestPath
                 print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
+                CurrentShortestPath = self.GetCurrentShortestPath(path, PreviousShortestPath)
                 return path
+            
+            
         print("Failed to find path")
         return []
     
