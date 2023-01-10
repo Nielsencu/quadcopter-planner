@@ -66,25 +66,49 @@ class Configuration:
     def getBoundedConfiguration(self, start: Configuration, goal: Configuration, path, path_len_min, CurrentShortestPath) -> List[Configuration]: 
         # Sample X,Y,Z space TODO:Change hardcoding of low and high 
         if path: #make sure it only ellipsoidal bounds its search after a path has been found
-            x_el_min = start.pos.x - (CurrentShortestPath - path_len_min)/2 
-            x_el_max = goal.pos.x + (CurrentShortestPath - path_len_min)/2 
-            y_el_min = start.pos.y - math.sqrt(CurrentShortestPath**2 - path_len_min**2)
-            y_el_max = start.pos.y + math.sqrt(CurrentShortestPath*2 - path_len_min*2)
-            z_el_min = start.pos.z - math.sqrt(CurrentShortestPath**2 - path_len_min**2)
-            z_el_max = start.pos.z + math.sqrt(CurrentShortestPath**2 - path_len_min**2)
+                 #rejection sampling 
             
-            pos_x = np.random.randint(low=x_el_min,high = x_el_max)
-            pos_y = np.random.randint(low=y_el_min, high = y_el_max)
-            pos_z = np.random.randint(low=z_el_min, high = z_el_max)
-            yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
-            cost = 0 
+            ellipsbound = (path_len_min-CurrentShortestPath) + ((path_len_min-CurrentShortestPath)+path_len_min) 
             
+            #dummy configuration for initiating the search
+            max_x = np.random.randint(low=math.inf,high =math.inf)
+            max_y = np.random.randint(low=math.inf,high =math.inf)
+            max_z = np.random.randint(low=math.inf,high =math.inf)
+            max_yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+            max_cost = 0 
+            
+            found_point = Configuration(max_x, max_y, max_z, max_cost, max_yaw)
+            
+            #x_el_min = start.pos.x - (CurrentShortestPath - path_len_min)/2 
+            #x_el_max = goal.pos.x + (CurrentShortestPath - path_len_min)/2 
+            #y_el_min = start.pos.y - math.sqrt(CurrentShortestPath**2 - path_len_min**2)
+            #y_el_max = start.pos.y + math.sqrt(CurrentShortestPath*2 - path_len_min*2)
+            #z_el_min = start.pos.z - math.sqrt(CurrentShortestPath**2 - path_len_min**2)
+            #z_el_max = start.pos.z + math.sqrt(CurrentShortestPath**2 - path_len_min**2)
+            
+            while start.pos.getL2(found_point.pos) + start.pos.getL2(found_point.pos) > ellipsbound:
+                
+                
+                #pos_x = np.random.randint(low=x_el_min,high = x_el_max)
+                #pos_y = np.random.randint(low=y_el_min, high = y_el_max)
+                #pos_z = np.random.randint(low=z_el_min, high = z_el_max)
+                #yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+                #cost = 0 
+                
+                pos_x = np.random.randint(low=0,high=99)
+                pos_y = np.random.randint(low=0,high=99)
+                pos_z = np.random.randint(low=0,high=99)
+                yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
+                cost = 0 
+                 
+                found_point = Configuration(pos_x, pos_y, pos_z, cost, yaw)
         else:
-            pos_x = np.random.randint(low=x_el_min,high = x_el_max)
-            pos_y = np.random.randint(low=y_el_min, high = y_el_max)
-            pos_z = np.random.randint(low=z_el_min, high = z_el_max) 
+            pos_x = np.random.randint(low=0,high=99)
+            pos_y = np.random.randint(low=0,high=99)
+            pos_z = np.random.randint(low=0,high=99) 
             yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
             cost = 0 
+            
         return Configuration(pos_x, pos_y, pos_z, cost, yaw)
         
 class RobotModel:
@@ -135,10 +159,6 @@ class GridMap:
                     if point.getL2(original) < max_l2:
                         self.flagAsOccupied(point)
                 
-
-class InformedRRTStarPlanner:
-    def __init__(self):
-        ...
 class RRTPlanner:
     def __init__(self, map : GridMap, maxTimeTaken=2, maxNodesExpanded=10000):
         self.map = map
