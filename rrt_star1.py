@@ -190,6 +190,9 @@ class RRTPlanner:
                  if dist < minDist and dist != 0 and q.cost + dist < vertex.cost:
                     vertex.parent = q
                     
+                    #rrt_star must still be adjusted so it doesnt stop searching after 
+                    # it finds a configuration
+                    
             if q.pos.getL2(goal.pos) > self.goalErrorMargin:
                 continue
             path = []
