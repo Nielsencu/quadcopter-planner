@@ -79,21 +79,9 @@ class Configuration:
             
             found_point = Configuration(max_x, max_y, max_z, max_cost, max_yaw)
             
-            #x_el_min = start.pos.x - (CurrentShortestPath - path_len_min)/2 
-            #x_el_max = goal.pos.x + (CurrentShortestPath - path_len_min)/2 
-            #y_el_min = start.pos.y - math.sqrt(CurrentShortestPath**2 - path_len_min**2)
-            #y_el_max = start.pos.y + math.sqrt(CurrentShortestPath*2 - path_len_min*2)
-            #z_el_min = start.pos.z - math.sqrt(CurrentShortestPath**2 - path_len_min**2)
-            #z_el_max = start.pos.z + math.sqrt(CurrentShortestPath**2 - path_len_min**2)
             
             while start.pos.getL2(found_point.pos) + start.pos.getL2(found_point.pos) > ellipsbound:
                 
-                
-                #pos_x = np.random.randint(low=x_el_min,high = x_el_max)
-                #pos_y = np.random.randint(low=y_el_min, high = y_el_max)
-                #pos_z = np.random.randint(low=z_el_min, high = z_el_max)
-                #yaw = np.random.randint(low=-math.pi, high=math.pi) # Sample yaw from -pi to pi
-                #cost = 0 
                 
                 pos_x = np.random.randint(low=0,high=99)
                 pos_y = np.random.randint(low=0,high=99)
@@ -244,6 +232,7 @@ class RRTPlanner:
             q.cost = qPrime.cost +  qPrime.pos.getL2(q.pos)
             
             #RRT_star rewiring
+            
             minDist = math.inf
             for vertex in vertices:
                  dist = vertex.pos.getL2(q.pos)
