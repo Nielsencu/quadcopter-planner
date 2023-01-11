@@ -1,12 +1,11 @@
 import gym
 from linear_controller import LinearPDController
 from nonlinear_controller import NonLinearPDController
+from mpc_controller import MPCController
 from envs.Quadrotor import Quadrotor
 from trajectory import *
 from matplotlib import pyplot as plt
 from collections import deque
-from mpc_controller import MPCController
-import numpy as np
 
 """
 Please run this file by running python main.py, you can change the trajectory or controller by setting traj and controller variable respectively.
@@ -32,9 +31,10 @@ if __name__ == "__main__":
 
     NONLINEAR = 0
     LINEAR = 1
+    
 
     traj = TUD
-    controller = 'MPC'
+    controller = 'mpc_controller'
     
     if traj == CIRCLE:
         T=9
@@ -56,8 +56,9 @@ if __name__ == "__main__":
     elif controller == LINEAR:
         controller = LinearPDController()
         ctrl_type = "Linear Controller"
-    elif controller == 'MPC':
+    elif controller == 'mpc_controller':
         controller = MPCController()
+        ctrl_type = "MPC"
     
     ax.set_title(f"Following {trajectory.getName()} trajectory with {ctrl_type}")
 
@@ -73,9 +74,9 @@ if __name__ == "__main__":
     stable_count = 0
     time_to_complete = END_SIM_TIME
     while t < END_SIM_TIME:
-        des_state = trajectory.getDesState(t)
-        ctrl_var = controller.mpccontrol(des_state, cur_state)
-        action = ctrl_var['cmd_motor_speeds']
+        des_state = TUDTrajectory(dt = dt).getDesState(t)
+        ctrl_var = controller.Control(des_state, cur_state, t)
+        action = ctrl_var["cmd_motor_speeds"]
         cur_state, reward, done, info = env.step(action)
         print(f"Desired state: {des_state}")
         print(f"Current state: {cur_state}")
