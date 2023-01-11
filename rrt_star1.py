@@ -22,7 +22,7 @@ class Point3D:
         return f'{self.x, self.y, self.z}'
         
     def getL2(self, p1) -> float:
-        return (p1.x - self.x) ** 2 + (p1.y - self.y) ** 2 + (p1.z - self.z) ** 2
+        return math.sqrt((p1.x - self.x) ** 2 + (p1.y - self.y) ** 2 + (p1.z - self.z) ** 2)
     
     def getMag(self):
         return (self.x ** 2 + self.y ** 2 + self.z ** 2) ** 0.5
@@ -142,19 +142,20 @@ class RRTPlanner:
     def getLowestCostNeighbor(self, vertices: Set[Configuration], q: Configuration) -> Configuration:
         lowestcostvertex = None
         #TODO: Find maximum of minimum distance according to map size instead o inf
-        minDist = 5 # radius
+        minCost = math.inf
         for vertex in vertices:
             #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
             # check neighbors within radius of the new point and check which one has 
             #the shortest total cost and choose that one as new vertex
             #This means you will have to keep track of the total cost to get to each vertex
             # This can maybe be done in the similar way of the .parent but then .cost
-            dist = vertex.pos.getL2(q.pos)
-            minCost = math.inf
-            if dist < minDist and dist != 0 and vertex.cost < minCost:
-                minCost = vertex.cost
-                lowestcostvertex = vertex
-   
+            dist = (vertex.pos.getL2(q.pos))
+
+            if  dist != 0:
+                if vertex.cost + dist < minCost:
+                    minCost = vertex.cost + dist
+                    lowestcostvertex = vertex
+        print(minCost)      
         return lowestcostvertex
         
     def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
@@ -189,10 +190,7 @@ class RRTPlanner:
                  dist = vertex.pos.getL2(q.pos)
                  if dist < minDist and dist != 0 and q.cost + dist < vertex.cost:
                     vertex.parent = q
-                    
-                    #rrt_star must still be adjusted so it doesnt stop searching after 
-                    # it finds a configuration
-                    
+                        
             if q.pos.getL2(goal.pos) > self.goalErrorMargin:
                 continue
             path = []
