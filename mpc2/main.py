@@ -73,7 +73,7 @@ if __name__ == "__main__":
     w_history = []
     stable_count = 0
     time_to_complete = END_SIM_TIME
-    for t in range(0, END_SIM_TIME):
+    while t < END_SIM_TIME:
         des_state = TUDTrajectory(dt = dt).getDesState(t)
         ctrl_var = controller.Control(des_state, cur_state, t)
         action = ctrl_var["cmd_motor_speeds"]
