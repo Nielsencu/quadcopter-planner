@@ -59,43 +59,43 @@ class Quadrotor(core.Env):
         self.weight = np.array([0, 0, -self.mass*self.g])
         
         
-        self.t_step = 0.1
+        self.t_step = 0.01
         s =12
         #s = {x, y, z, dx, dy, dz, psi, theta, phi, psi_dot, phi_dot, theta_dot}
         #need to convert quartetions to psi, theta, phi
         
-        Ac = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 0, 0, self.g, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 0, (-self.g), 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ])
-        Bc = np.array([[0, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [1/self.mass, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [0, 0, 0, 0],
-                       [0, 1/self.Ixx, 0, 0],
-                       [0, 0, 1/self.Iyy, 0],
-                       [0, 0, 0, 1/self.Izz]])
+        A_c = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, self.g, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, (-self.g), 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ])
+        B_c = np.array([[0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [1/self.mass, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 1/self.Ixx, 0, 0],
+                        [0, 0, 1/self.Iyy, 0],
+                        [0, 0, 0, 1/self.Izz]])
         
-        Cc = np.eye(s)
-        Dc = np.zeros((s, 4))
-        sysc = control.ss(Ac, Bc, Cc, Dc)
+        C_c = np.eye(s)
+        D_c = np.zeros((s, 4))
+        sysc = control.ss(A_c, B_c, C_c, D_c)
         # Discretization
         sysd = control.sample_system(sysc, self.t_step, method='bilinear')
-        self.Ad = sysd.A
-        self.Bd = sysd.B
+        self.A_d = sysd.A
+        self.B_d = sysd.B
         
         self.Hx = np.array([
                             [0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0],  # roll pitch constraints
@@ -124,41 +124,41 @@ class Quadrotor(core.Env):
                             [0, 0, 0, -1.0]
                             ])
         self.h = np.array([[0.5*self.g],  # z acc constraints
-                           [0.5*self.g],
-                           [0.5],  
-                           [0.5],
-                           [2.0],#velocity constraints
-                           [2.0],
-                           [2.0],
-                           [0.5], 
-                           [0.5],
-                           [2.0],
-                           [2.0],
-                           [2.0],
-                           [0.5],  
-                           [0.5]
-                           ])
+                            [0.5*self.g],
+                            [0.5],  
+                            [0.5],
+                            [2.0],#velocity constraints
+                            [2.0],
+                            [2.0],
+                            [0.5], 
+                            [0.5],
+                            [2.0],
+                            [2.0],
+                            [2.0],
+                            [0.5],  
+                            [0.5]
+                            ])
         self.h1 = np.array([[1.5*self.g],  # z acc constraints
-                           [-0.5*self.g],
-                           [0.15],  
-                           [0.15],
-                           [0.15],
-                           [0.15],  
-                           [0.15],  
-                           [0.15],
-                           [0.5],  
-                           [0.5],
-                           [2.0],#velocity constraints
-                           [2.0],
-                           [2.0],
-                           [0.5], 
-                           [0.5],
-                           [2.0],
-                           [2.0],
-                           [2.0],
-                           [0.5],  
-                           [0.5]
-                           ])
+                            [-0.5*self.g],
+                            [0.15],  
+                            [0.15],
+                            [0.15],
+                            [0.15],  
+                            [0.15],  
+                            [0.15],
+                            [0.5],  
+                            [0.5],
+                            [2.0],#velocity constraints
+                            [2.0],
+                            [2.0],
+                            [0.5], 
+                            [0.5],
+                            [2.0],
+                            [2.0],
+                            [2.0],
+                            [0.5],  
+                            [0.5]
+                            ])
 
     def reset(self, position=[0, 0, 0], yaw =0, pitch=0, roll=0):
         '''
@@ -171,7 +171,13 @@ class Quadrotor(core.Env):
         s[:3] = position
         r = Rotation.from_euler('zxy', [yaw, roll, pitch], degrees=True)
         quat = r.as_quat()
+        s[3] = 0
+        s[4] = 0
+        s[5] = 0
         s[6:10] = quat
+        s[10] = yaw
+        s[11] = pitch
+        s[12] = roll
         self.state = self._unpack_state(s)
         return self.state
 

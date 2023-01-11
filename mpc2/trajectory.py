@@ -21,7 +21,6 @@ class Trajectory:
 
     def pack_state_as_dict(self, pos, vel, acc, yaw, yaw_dot):
         return {'x' : pos, 'x_dot' : vel, 'x_ddot' : acc, 'yaw' : yaw, 'yaw_dot' : yaw_dot}
-                # 3 + 3 + 3 + 1 + 1
 
 
 class HoverTrajectory(Trajectory):
@@ -214,9 +213,9 @@ class TUDTrajectory(Trajectory):
                 nextAngle = tj_from_line(start_pos, end_pos, self.T, t_c+self.dt)
                 nextNextAngle = tj_from_line(start_pos, end_pos, self.T, t_c+2*self.dt)
 
-                pos = calcPos(center, self.pos_from_angle(radius, angle))
-                nextPos = calcPos(center, self.pos_from_angle(radius, nextAngle))
-                nextNextPos = calcPos(center, self.pos_from_angle(radius, nextNextAngle))
+                pos = calcPos(center, TUDTrajectory.pos_from_angle(self,radius, angle))
+                nextPos = calcPos(center, TUDTrajectory.pos_from_angle(self,radius, nextAngle))
+                nextNextPos = calcPos(center, TUDTrajectory.pos_from_angle(self,radius, nextNextAngle))
 
                 vel = (nextPos - pos) / self.dt
                 nextVel = (nextNextPos - nextPos) / self.dt
