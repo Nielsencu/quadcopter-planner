@@ -22,7 +22,7 @@ class Point3D:
         return f'{self.x, self.y, self.z}'
         
     def getL2(self, p1) -> float:
-        return math.sqrt((p1.x - self.x) ** 2 + (p1.y - self.y) ** 2 + (p1.z - self.z) ** 2)
+        return (p1.x - self.x) ** 2 + (p1.y - self.y) ** 2 + (p1.z - self.z) ** 2
     
     def getMag(self):
         return (self.x ** 2 + self.y ** 2 + self.z ** 2) ** 0.5
@@ -154,8 +154,7 @@ class RRTPlanner:
             if  dist != 0:
                 if vertex.cost + dist < minCost:
                     minCost = vertex.cost + dist
-                    lowestcostvertex = vertex
-        print(minCost)      
+                    lowestcostvertex = vertex   
         return lowestcostvertex
         
     def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
