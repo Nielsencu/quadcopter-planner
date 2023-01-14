@@ -114,9 +114,9 @@ class GridMap:
                         self.flagAsOccupied(point)
                 
 class RRTPlanner:
-    def __init__(self, map : GridMap, maxTimeTaken=2, maxNodesExpanded=10000):
+    def __init__(self, map : GridMap, maxTimeTaken=4, maxNodesExpanded=10000):
         self.map = map
-        self.maxTimeTaken = maxTimeTaken
+        self.maxTimeTaken = maxTimeTaken #in informed rrt, maxtime is maxtimetaken -3
         # TODO: Bug when error margin is 75, won't find path
         self.startErrorMargin = 3 * (5**2)
         self.goalErrorMargin = 3 * (5**2)
@@ -128,7 +128,7 @@ class RRTPlanner:
         if path: #make sure it only ellipsoidal bounds its search after a path has been found
                  #rejection sampling 
             
-            ellipsbound = (path_len_min-CurrentShortestPath) + ((path_len_min-CurrentShortestPath)+path_len_min) 
+            ellipsbound = ((CurrentShortestPath-path_len_min)/2) + (((CurrentShortestPath-path_len_min)/2)+path_len_min) 
             
             while True:
                 
@@ -141,8 +141,8 @@ class RRTPlanner:
                 found_point = Configuration(pos_x, pos_y, pos_z, cost, yaw)
                 
                 if start.pos.getL2(found_point.pos) + goal.pos.getL2(found_point.pos) > ellipsbound:
-                    
                     break 
+                
         else:
             pos_x = np.random.randint(low=0,high=99)
             pos_y = np.random.randint(low=0,high=99)
@@ -197,6 +197,7 @@ class RRTPlanner:
         path_len_min = goal.pos.getL2(start.pos)
         start.cost = 0
         path = []
+        shortest_path =[]
         CurrentShortestPath = math.inf
         while time.time() - timeStart < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
             q = self.getBoundedConfiguration(start, goal, path,path_len_min, CurrentShortestPath)
@@ -234,21 +235,29 @@ class RRTPlanner:
                 q = q.parent
             path.append(q)
             
-            #getting the shortest path for informed RRT
+            #getting the shortest path yet for informed RRT ellipsoid
+            
             PreviousShortestPath = CurrentShortestPath
             current_path_len = 0
             
             for i in range(len(path)-1):
                     current_path_len +=  path[i].pos.getL2(path[i+1].pos) 
-                    if current_path_len < PreviousShortestPath:
-                        CurrentShortestPath = current_path_len
-                    else:
-                        CurrentShortestPath = PreviousShortestPath
-                        
-            if (time.time() - timeStart) > self.maxTimeTaken and q.pos.getL2(start.pos)  < self.startErrorMargin:
+                    
+            if current_path_len < PreviousShortestPath and q.pos.getL2(start.pos)  < self.startErrorMargin:
+                CurrentShortestPath = current_path_len
+                shortest_path = path
+            elif current_path_len < PreviousShortestPath: 
+                CurrentShortestPath = current_path_len
+                shortest_path = shortest_path
+            else:
+                CurrentShortestPath = PreviousShortestPath
+                shortest_path = shortest_path
+                
+        if shortest_path:
                 print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
-                return path
-        print("Failed to find path")
-        return []
+                return shortest_path
+        else:
+            print("Failed to find path")
+            return []
     
     #possible_vertices = ("f",[possible_vertices])
