@@ -33,7 +33,7 @@ if __name__ == "__main__":
     LINEAR = 1
     
 
-    traj = TUD
+    traj = CIRCLE
     controller = 'mpc_controller'
     
     if traj == CIRCLE:
@@ -73,8 +73,8 @@ if __name__ == "__main__":
     w_history = []
     stable_count = 0
     time_to_complete = END_SIM_TIME
-    while t < END_SIM_TIME:
-        des_state = TUDTrajectory(dt = dt).getDesState(t)
+    while t < 3:
+        des_state = CircleTrajectory(dt = dt).getDesState(t)
         ctrl_var = controller.Control(des_state, cur_state, t)
         action = ctrl_var["cmd_motor_speeds"]
         cur_state, reward, done, info = env.step(action)
