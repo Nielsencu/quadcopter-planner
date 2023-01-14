@@ -123,15 +123,15 @@ class CircleTrajectory(Trajectory):
 
     def getDesState(self, t):
         self.t = t
-        if self.t > self.T:
+        if self.t > CircleTrajectory(self.dt).T:
             pos = [self.radius, 0, 2.5]
             vel = [0,0,0]
             acc = [0,0,0]
         else:
-            angle = tj_from_line(0, 2*np.pi, self.T, self.t)
-            pos = self.pos_from_angle(angle)
-            vel = self.get_vel(self.t)
-            acc = (self.get_vel(self.t+self.dt) - vel) / self.dt
+            angle = tj_from_line(0, 2*np.pi, CircleTrajectory(self.dt).T, self.t)
+            pos = CircleTrajectory(self.dt).pos_from_angle(angle)
+            vel = CircleTrajectory(self.dt).get_vel(self.t)
+            acc = (CircleTrajectory(self.dt).get_vel(self.t+self.dt) - vel) / self.dt
         return self.pack_state_as_dict(pos, vel, acc, 0, 0)
 
 

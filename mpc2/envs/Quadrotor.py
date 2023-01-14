@@ -59,7 +59,7 @@ class Quadrotor(core.Env):
         self.weight = np.array([0, 0, -self.mass*self.g])
         
         
-        self.t_step = 0.01
+        self.t_step = .01
         s =12
         #s = {x, y, z, dx, dy, dz, psi, theta, phi, psi_dot, phi_dot, theta_dot}
         #need to convert quartetions to psi, theta, phi
@@ -76,6 +76,25 @@ class Quadrotor(core.Env):
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], ])
+        A_c = np.zeros((12,12))
+        # A_c[0,3] = 1
+        # A_c[1,4] = 1.
+        # A_c[2,5] = 1.
+        # A_c[3,7] = -self.g
+        # A_c[4,6] = self.g
+        # A_c[6,9] = 1.
+        # A_c[7,10] = 1.
+        # A_c[8,11] = 1.
+        
+        # A_c[0, 3] = 1.
+        # A_c[1, 4] = 1.
+        # A_c[2, 5] = 1.
+        # A_c[6, 1] = -self.g
+        # A_c[7, 0] = self.g
+        # A_c[9, 6] = 1.
+        # A_c[10, 7] = 1.
+        # A_c[11, 8] = 1.
+        
         B_c = np.array([[0, 0, 0, 0],
                         [0, 0, 0, 0],
                         [0, 0, 0, 0],
@@ -88,12 +107,22 @@ class Quadrotor(core.Env):
                         [0, 1/self.Ixx, 0, 0],
                         [0, 0, 1/self.Iyy, 0],
                         [0, 0, 0, 1/self.Izz]])
+        # B_c = np.zeros((12,4))
+        # B_c[4,0] = 1/self.mass
+        # B_c[9,1] = 1/self.Ixx
+        # B_c[10,2] = 1/self.Iyy
+        # B_c[11,3] = 1/self.Izz
+        
+        # B_c[3, 1] = 1/self.Ixx
+        # B_c[4, 2] = 1/self.Iyy
+        # B_c[5, 3] = 1/self.Izz
+        # B_c[8, 0] = 1/self.mass
         
         C_c = np.eye(s)
         D_c = np.zeros((s, 4))
         sysc = control.ss(A_c, B_c, C_c, D_c)
         # Discretization
-        sysd = control.sample_system(sysc, self.t_step, method='bilinear')
+        sysd = control.c2d(sysc, self.t_step, method='bilinear')
         self.A_d = sysd.A
         self.B_d = sysd.B
         

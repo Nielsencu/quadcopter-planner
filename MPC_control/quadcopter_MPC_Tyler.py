@@ -27,39 +27,39 @@ class Quadcopter_MPC:
         plt.title('Trajectory')
         plt.show()
 
-        plt.plot(time, x_pos, label='x')
-        plt.plot(time, y_pos, label='y')
-        plt.plot(time, z_pos, label='z')
-        plt.plot(time, x_vel, label='x vel')
-        plt.plot(time, y_vel, label='y vel')
-        plt.plot(time, z_vel, label='z vel')
-        plt.xlabel('Time (s)')
-        plt.grid()
-        plt.legend()
-        plt.title('Linear States')
-        plt.show()
+        # plt.plot(time, x_pos, label='x')
+        # plt.plot(time, y_pos, label='y')
+        # plt.plot(time, z_pos, label='z')
+        # plt.plot(time, x_vel, label='x vel')
+        # plt.plot(time, y_vel, label='y vel')
+        # plt.plot(time, z_vel, label='z vel')
+        # plt.xlabel('Time (s)')
+        # plt.grid()
+        # plt.legend()
+        # plt.title('Linear States')
+        # plt.show()
 
-        plt.plot(time, roll, label='roll')
-        plt.plot(time, pitch, label='pitch')
-        plt.plot(time, yaw, label='yaw')
-        plt.plot(time, roll_rate, label='roll rate')
-        plt.plot(time, pitch_rate, label='pitch rate')
-        plt.plot(time, yaw_rate, label='yaw rate')
-        plt.xlabel('Time (s)')
-        plt.grid()
-        plt.legend()
-        plt.title('Angular States')
-        plt.show()
+        # plt.plot(time, roll, label='roll')
+        # plt.plot(time, pitch, label='pitch')
+        # plt.plot(time, yaw, label='yaw')
+        # plt.plot(time, roll_rate, label='roll rate')
+        # plt.plot(time, pitch_rate, label='pitch rate')
+        # plt.plot(time, yaw_rate, label='yaw rate')
+        # plt.xlabel('Time (s)')
+        # plt.grid()
+        # plt.legend()
+        # plt.title('Angular States')
+        # plt.show()
 
-        plt.plot(time, ft_hist, label='ft')
-        plt.plot(time, tx_hist, label='tx')
-        plt.plot(time, ty_hist, label='ty')
-        plt.plot(time, tz_hist, label='tz')
-        plt.xlabel('Time (s)')
-        plt.grid()
-        plt.legend()
-        plt.title('Control Inputs')
-        plt.show()
+        # plt.plot(time, ft_hist, label='ft')
+        # plt.plot(time, tx_hist, label='tx')
+        # plt.plot(time, ty_hist, label='ty')
+        # plt.plot(time, tz_hist, label='tz')
+        # plt.xlabel('Time (s)')
+        # plt.grid()
+        # plt.legend()
+        # plt.title('Control Inputs')
+        # plt.show()
 
 
     def animated_plot2d(self):
@@ -171,62 +171,73 @@ class Quadcopter_MPC:
 
 
     class Quadcopter:
-        def __init__(self, DT, waypt_thresh, xrange, **init_kwargs):
-            self.DT = DT
+        def __init__(self, dt, waypt_thresh, xrange, **state):
+            self.dt = dt
             self.waypt_thresh = waypt_thresh
             self.xmin = xrange[0]
             self.xmax = xrange[1]
 
-            self.Ix = 1.
-            self.Iy = 1.
-            self.Iz = 1.5
+            self.mass            =  0.030  # kg
+            self.Ixx             = 1.43e-5  # kg*m^2
+            self.Iyy             = 1.43e-5  # kg*m^2
+            self.Izz             = 2.89e-5  # kg*m^2
 
-            self.g = 9.8  # m/s^2
-            self.m = 5.        
+            self.g = 9.81  # m/s^2
+                  
 
             #  States
-            self.x_dot = init_kwargs['x_dot'] if 'x_dot' in init_kwargs.keys() else 0.
-            self.y_dot = init_kwargs['y_dot'] if 'y_dot' in init_kwargs.keys() else 0.
-            self.z_dot = init_kwargs['z_dot'] if 'z_dot' in init_kwargs.keys() else 0.
-            self.x = init_kwargs['x'] if 'x' in init_kwargs.keys() else 0.
-            self.y = init_kwargs['y'] if 'y' in init_kwargs.keys() else 0.
-            self.z = init_kwargs['z'] if 'z' in init_kwargs.keys() else 0.
+            self.x = state['x'] if 'x' in state.keys() else 0.
+            self.y = state['y'] if 'y' in state.keys() else 0.
+            self.z = state['z'] if 'z' in state.keys() else 0.
+            self.x_dot = state['x_dot'] if 'x_dot' in state.keys() else 0.
+            self.y_dot = state['y_dot'] if 'y_dot' in state.keys() else 0.
+            self.z_dot = state['z_dot'] if 'z_dot' in state.keys() else 0.
+            
+            self.roll = state['roll'] if 'roll' in state.keys() else 0.
+            self.pitch = state['pitch'] if 'pitch' in state.keys() else 0.
+            self.yaw = state['yaw'] if 'yaw' in state.keys() else 0.
+            self.roll_dot = state['roll_dot'] if 'roll_dot' in state.keys() else 0.
+            self.pitch_dot = state['pitch_dot'] if 'pitch_dot' in state.keys() else 0.
+            self.yaw_dot = state['yaw_dot'] if 'yaw_dot' in state.keys() else 0.
+            
 
-            self.roll_dot = init_kwargs['roll_dot'] if 'roll_dot' in init_kwargs.keys() else 0.
-            self.pitch_dot = init_kwargs['pitch_dot'] if 'pitch_dot' in init_kwargs.keys() else 0.
-            self.yaw_dot = init_kwargs['yaw_dot'] if 'yaw_dot' in init_kwargs.keys() else 0.
-            self.roll = init_kwargs['roll'] if 'roll' in init_kwargs.keys() else 0.
-            self.pitch = init_kwargs['pitch'] if 'pitch' in init_kwargs.keys() else 0.
-            self.yaw = init_kwargs['yaw'] if 'yaw' in init_kwargs.keys() else 0.
+            self.A_d = np.eye(12)
+            self.B_d = np.zeros((12, 4))
 
-            self.A_zoh = np.eye(12)
-            self.B_zoh = np.zeros((12, 4))
-
-            self.states = np.array([self.roll, self.pitch, self.yaw, self.roll_dot, self.pitch_dot, self.yaw_dot,
-                                    self.x_dot, self.y_dot, self.z_dot, self.x, self.y, self.z]).T
+            self.states = np.array([self.x, self.y, self.z, self.x_dot,self.y_dot, self.z_dot, self.roll, self.pitch, self.yaw, self.roll_dot, self.pitch_dot, self.yaw_dot]).T
 
         @property
         def A(self):
             # Linear state transition matrix
-            A = np.zeros((12, 12))
-            A[0, 3] = 1.
-            A[1, 4] = 1.
-            A[2, 5] = 1.
-            A[6, 1] = -self.g
-            A[7, 0] = self.g
-            A[9, 6] = 1.
-            A[10, 7] = 1.
-            A[11, 8] = 1.
+            A =  np.array([[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, -self.g, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, self.g, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] ])
             return A
 
         @property
         def B(self):
             # Control matrix
-            B = np.zeros((12, 4))
-            B[3, 1] = 1/self.Ix
-            B[4, 2] = 1/self.Iy
-            B[5, 3] = 1/self.Iz
-            B[8, 0] = 1/self.m
+            B = np.array([[0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [1/self.mass, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 1/self.Ixx, 0, 0],
+                            [0, 0, 1/self.Iyy, 0],
+                            [0, 0, 0, 1/self.Izz]])
             return B
 
         @property
@@ -243,10 +254,11 @@ class Quadcopter_MPC:
         def Q(self):
             # State cost
             Q = np.eye(12)
-            Q[8, 8] = 5.  # z vel
-            Q[9, 9] = 10.  # x pos
-            Q[10, 10] = 10.  # y pos
-            Q[11, 11] = 100.  # z pos
+            
+            Q[5, 5] = 5.  # z vel
+            Q[0, 0] = 10.  # x pos
+            Q[1, 1] = 10.  # y pos
+            Q[2, 2] = 10.  # z pos
             return Q
 
         @property
@@ -255,22 +267,28 @@ class Quadcopter_MPC:
             R = np.eye(4)*.001
             return R
 
-        def zoh(self):
+        def discretize_ss(self):
             # Convert continuous time dynamics into discrete time
-            sys = control.StateSpace(self.A, self.B, self.C, self.D)
-            sys_discrete = control.c2d(sys, self.DT, method='zoh')
+            sys = control.ss(self.A, self.B, self.C, self.D)
+            sys_discrete = control.c2d(sys, self.dt)
 
-            self.A_zoh = np.array(sys_discrete.A)
-            self.B_zoh = np.array(sys_discrete.B)
+            self.A_d = np.array(sys_discrete.A)
+            self.B_d = np.array(sys_discrete.B)
 
         def run_mpc(self, rx):
             cost = 0.
             constr = [x[:, 0] == x_init]
+            ux = np.array([self.mass*self.g/4, self.mass*self.g/4, self.mass*self.g/4, self.mass*self.g/4])
             for t in range(N):
-                cost += cp.quad_form(rx - x[:, t], self.Q) + cp.quad_form(u[:, t], self.R)  # Linear Quadratic cost
+                
+                if t > 0: #do not penalize state at start point
+                    cost += cp.quad_form(rx - x[:, t], self.Q)   # Linear Quadratic cost
+                    
+                cost += cp.quad_form(ux - u[:, t], self.R)
                 constr += [self.xmin <= x[:, t], x[:, t] <= self.xmax]  # State constraints
-                constr += [x[:, t + 1] == self.A_zoh @ x[:, t] + self.B_zoh @ u[:, t]]
-
+                constr += [x[:, t + 1] == self.A_d @ x[:, t] + self.B_d @ u[:, t]]
+                constr += [-0.07*30 <= u[:, t], u[:, t] <= 0.07*30]
+                
             cost += cp.quad_form(x[:, N] - rx, self.Q)  # End of trajectory error cost
             problem = cp.Problem(cp.Minimize(cost), constr)
             return problem
@@ -280,33 +298,34 @@ class Quadcopter_MPC:
             Update the dynamic EOMs using Euler's forward method.
             EOMs taken from https://www.kth.se/polopoly_fs/1.588039.1600688317!/Thesis%20KTH%20-%20Francesco%20Sabatino.pdf
             """
-            roll_ddot = ((self.Iy - self.Iz) / self.Ix) * (self.pitch_dot * self.yaw_dot) + tx / self.Ix
-            pitch_ddot = ((self.Iz - self.Ix) / self.Iy) * (self.roll_dot * self.yaw_dot) + ty / self.Iy
-            yaw_ddot = ((self.Ix - self.Iy) / self.Iz) * (self.roll_dot * self.pitch_dot) + tz / self.Iz
-            x_ddot = -(ft/self.m) * (s(self.roll) * s(self.yaw) + c(self.roll)*c(self.yaw) * s(self.pitch))
-            y_ddot = -(ft/self.m) * (c(self.roll) * s(self.yaw) * s(self.pitch) - c(self.yaw) * s(self.roll))
-            z_ddot = -1*(self.g - (ft/self.m) * (c(self.roll) * c(self.pitch)))
+            roll_ddot = ((self.Iyy - self.Izz) / self.Ixx) * (self.pitch_dot * self.yaw_dot) + tx / self.Ixx
+            pitch_ddot = ((self.Izz - self.Ixx) / self.Iyy) * (self.roll_dot * self.yaw_dot) + ty / self.Iyy
+            yaw_ddot = ((self.Ixx - self.Iyy) / self.Izz) * (self.roll_dot * self.pitch_dot) + tz / self.Izz
+            x_ddot = -(ft/self.mass) * (s(self.roll) * s(self.yaw) + c(self.roll)*c(self.yaw) * s(self.pitch))
+            y_ddot = -(ft/self.mass) * (c(self.roll) * s(self.yaw) * s(self.pitch) - c(self.yaw) * s(self.roll))
+            z_ddot = -1*(self.g - (ft/self.mass) * (c(self.roll) * c(self.pitch)))
 
-            self.roll_dot += roll_ddot*self.DT
-            self.roll += self.roll_dot*self.DT
-            self.pitch_dot += pitch_ddot * self.DT
-            self.pitch += self.pitch_dot * self.DT
-            self.yaw_dot += yaw_ddot * self.DT
-            self.yaw += self.yaw_dot * self.DT
+            self.roll_dot += roll_ddot*self.dt
+            self.roll += self.roll_dot*self.dt
+            self.pitch_dot += pitch_ddot * self.dt
+            self.pitch += self.pitch_dot * self.dt
+            self.yaw_dot += yaw_ddot * self.dt
+            self.yaw += self.yaw_dot * self.dt
 
-            self.x_dot += x_ddot * self.DT
-            self.x += self.x_dot * self.DT
-            self.y_dot += y_ddot * self.DT
-            self.y += self.y_dot * self.DT
-            self.z_dot += z_ddot * self.DT
-            self.z += self.z_dot * self.DT
+            self.x_dot += x_ddot * self.dt
+            self.x += self.x_dot * self.dt
+            self.y_dot += y_ddot * self.dt
+            self.y += self.y_dot * self.dt
+            self.z_dot += z_ddot * self.dt
+            self.z += self.z_dot * self.dt
 
-            self.states = np.array([self.roll, self.pitch, self.yaw, self.roll_dot, self.pitch_dot, self.yaw_dot,
-                                    self.x_dot, self.y_dot, self.z_dot, self.x, self.y, self.z]).T
-
+            
+            self.states = np.array([self.x, self.y, self.z, self.x_dot,self.y_dot, self.z_dot, self.roll, self.pitch, self.yaw, self.roll_dot, self.pitch_dot, self.yaw_dot]).T
+            
         def move_ref(self, curr_pt):
             curr_pos = np.array([self.x, self.y])
             if np.linalg.norm(curr_pos - curr_pt) <= self.waypt_thresh:
+                print('error',np.linalg.norm(curr_pos - curr_pt))
                 return True
             return False
 
@@ -317,13 +336,13 @@ class Quadcopter_MPC:
             return False
 
         def __call__(self, ft=0., tx=0., ty=0., tz=0.):
-            hover = self.m*9.8
+            hover = self.mass*9.8
             self.update_states(hover+ft, tx, ty, tz)
 
 
     def run_simulation(self):
         # Simulation and solver time step (lower is more accurate, but takes more time. Shouldn't go higher than .025)
-        DT = .1
+        dt = .1
 
         # Defined desired waypoints to track
         waypoints = np.array([[0., 0.], [1., 2.], [2., 4.5], [3., 3.]])
@@ -338,27 +357,27 @@ class Quadcopter_MPC:
         spline_a_data = spline_gen.spline_data[:, 2]
 
         waypt_thresh = .25
-
-        INF = np.inf
-        xmin = np.array([-0.2, -0.2, -2*np.pi, -.25, -.25, -.25,  -INF,  -INF,  -INF, -INF, -INF, -INF])
-        xmax = np.array([0.2,  0.2,   2*np.pi,  .25, .25,  .25,   INF,   INF,   INF,   INF,  INF, INF])
-
+        
+        xmin = np.array([-np.inf,  -np.inf,  -np.inf, -np.inf, -np.inf, -np.inf, -0.2, -0.2, -2*np.pi, -.25, -.25, -.25])
+        xmax = np.array([np.inf ,  np.inf ,  np.inf , np.inf , np.inf , np.inf ,0.2, 0.2, 2*np.pi, .25, .25, .25])
+        
+       
         # Initial quadcopter states
-        init_dict = {'roll': 0., 'pitch': 0., 'yaw': 0., 'roll_dot': 0., 'pitch_dot': 0., 'yaw_dot': 0., 'x_dot': 0.,
-                    'y_dot': 0., 'z_dot': 0., 'x': 0., 'y': 0., 'z': 5.}
-        quad = self.Quadcopter(DT, waypt_thresh, [xmin, xmax], **init_dict)
-        quad.zoh()
+       
+        init_dict = {'x': 0., 'y': 0., 'z': 5., 'x_dot': 0.,'y_dot': 0., 'z_dot': 0.,'roll': 0., 'pitch': 0., 'yaw': 0., 'roll_dot': 0., 'pitch_dot': 0., 'yaw_dot': 0.}
+        
+        quad = self.Quadcopter(dt, waypt_thresh, [xmin, xmax], **init_dict)
+        quad.discretize_ss()
 
         # Initial solver states (copy of quadcopter states)
-        x0 = np.array([init_dict['roll'], init_dict['pitch'], init_dict['yaw'], init_dict['roll_dot'],
-                    init_dict['pitch_dot'], init_dict['yaw_dot'], init_dict['x_dot'], init_dict['y_dot'],
-                    init_dict['x_dot'], init_dict['x'], init_dict['y'], init_dict['z']])
-
+        x0 = np.array([init_dict['x'], init_dict['y'], init_dict['z'],init_dict['x_dot'], init_dict['y_dot'], init_dict['z_dot'],  init_dict['roll'], init_dict['pitch'], init_dict['yaw'], init_dict['roll_dot'],
+                       init_dict['pitch_dot'], init_dict['yaw_dot']])
+        
         # Desired states to track
-        des_states = {'roll': 0., 'pitch': 0., 'yaw': 0., 'roll_dot': 0., 'pitch_dot': 0., 'yaw_dot': 0., 'x_dot': 0.,
-                    'y_dot': 0., 'z_dot': 0., 'x': waypoints[0][0], 'y': waypoints[0][1], 'z': 5.}
+        des_states = {'x': waypoints[0][0], 'y': waypoints[0][1], 'z': 5.,'x_dot': 0.,
+                    'y_dot': 0., 'z_dot': 0.,'roll': 0., 'pitch': 0., 'yaw': 0., 'roll_dot': 0., 'pitch_dot': 0., 'yaw_dot': 0.}
 
-        [nx, nu] = quad.B.shape
+        [nx, nu] = quad.Q.shape[0], quad.R.shape[0]
         global N
         N = 20  # MPC Horizon length
 
@@ -392,7 +411,7 @@ class Quadcopter_MPC:
         ref_y_hist = []
         time = []
 
-        idx_incr = 60  # Amount of 'lookahead' for trajectory follower
+        idx_incr = 30  # Amount of 'lookahead' for trajectory follower
         idx = idx_incr  # Index for current spline point
 
         # Run simulation 'nsim' times
@@ -413,22 +432,22 @@ class Quadcopter_MPC:
                 idx = len(spline_x_data) - 1
 
             # Update reference states
-            xr = np.array([des_states['roll'], des_states['pitch'], des_states['yaw'], des_states['roll_dot'],
-                        des_states['pitch_dot'], des_states['yaw_dot'], des_states['x_dot'], des_states['y_dot'],
-                        des_states['x_dot'], ref_x, ref_y, des_states['z']])
-
+            xr = np.array([ref_x, ref_y, des_states['z'], des_states['x_dot'], des_states['y_dot'],
+           des_states['z_dot'],des_states['roll'], des_states['pitch'], des_states['yaw'], des_states['roll_dot'],
+                        des_states['pitch_dot'], des_states['yaw_dot'] ])
+           
             # Run optimization for N horizons
             prob = quad.run_mpc(xr)
 
             # Solve convex optimization problem
             x_init.value = x0
-            prob.solve(solver=cp.OSQP, warm_start=True)
-            x0 = quad.A_zoh.dot(x0) + quad.B_zoh.dot(u[:, 0].value)
+            prob.solve(solver=cp.OSQP)
+            x0 = quad.A_d.dot(x0) + quad.B_d.dot(u[:, 0].value)
 
             # Send only first calculated command to quadcopter, then run optimization again
             quad(u[0, 0].value, u[1, 0].value, u[2, 0].value, u[3, 0].value)
 
-            time.append(i*DT)
+            time.append(i*dt)
             x_pos.append(quad.x)
             y_pos.append(quad.y)
             z_pos.append(quad.z)
