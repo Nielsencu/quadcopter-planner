@@ -191,9 +191,9 @@ class RRTPlanner:
             graph.addVertex(q)
             if ax is not None:
                 # TODO: Real-time plotting? Use blit to cache background and avoid redrawing
-                x = np.array([point.pos.x for point in segment])
-                y = np.array([point.pos.y for point in segment])
-                z = np.array([point.pos.z for point in segment])
+                x = np.array([point.pos.x * 0.1 for point in segment])
+                y = np.array([point.pos.y * 0.1 for point in segment])
+                z = np.array([point.pos.z * 0.1 for point in segment])
                 ax.plot(x, y, z, '-b')
             graph.addLink(qPrime, q)
             err = q.getError(goal)
