@@ -51,6 +51,48 @@ class HoverTrajectory(Trajectory):
         vel = np.clip(vel, -1, 1) # Limit max vel
         acc = np.clip(acc, -1, 1) # Limit max acc
         return self.pack_state_as_dict(pos, vel, acc, 0,0)
+    
+class CustomTrajectory(Trajectory):
+    def __init__(self, dt, traj, T=5, name="Custom"):
+        super().__init__(dt)
+        self.T = T
+        self.name = name
+        self.traj = traj
+        self.timeEachWaypoint = self.T / len(self.traj)
+    
+    def getDesState(self, t):
+        self.t = t
+        if self.t < self.T:
+            waypoint = int(self.t // self.timeEachWaypoint)
+            print("Currently at waypoint ", waypoint, " max length is ", len(self.traj))
+            if waypoint >= len(self.traj) - 1:
+                vel = np.array([0,0,0])
+                acc = np.array([0,0,0])
+                end_pos = np.array(self.traj[-1])    
+                return self.pack_state_as_dict(end_pos, vel, acc, 0,0)    
+            start_pos = np.array(self.traj[waypoint])
+            end_pos = np.array(self.traj[waypoint+1])   
+            t_c = self.t - waypoint * self.timeEachWaypoint         
+        elif self.t >= self.T:
+            vel = np.array([0,0,0])
+            acc = np.array([0,0,0])
+            end_pos = np.array(self.traj[-1])
+            return self.pack_state_as_dict(end_pos, vel, acc, 0,0)
+        pos= tj_from_line(start_pos, end_pos, self.T, t_c)
+
+        nextPos= np.array(tj_from_line(start_pos, end_pos, self.T, t_c + self.dt))
+        nextNextPos= np.array(tj_from_line(start_pos, end_pos, self.T, t_c +2*self.dt))
+
+        vel = (nextPos - pos) / self.dt
+        nextVel = (nextNextPos - nextPos) / self.dt
+
+        acc = (nextVel - vel) / self.dt
+
+        vel = np.clip(vel, -1, 1) # Limit max vel
+        acc = np.clip(acc, -1, 1) # Limit max acc
+        
+        return self.pack_state_as_dict(pos, vel, acc, 0,0)
+    
 
 class DiamondTrajectory(Trajectory):
     def __init__(self, dt, end_x=1, T=12):
@@ -246,3 +288,4 @@ class TUDTrajectory(Trajectory):
         vel = np.clip(vel, -1, 1) # Limit max vel
         acc = np.clip(acc, -1, 1) # Limit max acc
         return self.pack_state_as_dict(pos, vel, acc, 0, 0)
+    

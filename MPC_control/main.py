@@ -8,6 +8,14 @@ from matplotlib import pyplot as plt
 from collections import deque
 import numpy as np
 
+import os, sys, inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir) 
+from RRT_planning.graphrrt import RRTPlanner, GridMap, Configuration
+from rrt_star1 import RRTPlanner as RRTStarPlanner
+from MPC_control.trajectory import CustomTrajectory
+
 """
 Please run this file by running python main.py, you can change the trajectory or controller by setting traj and controller variable respectively.
 """
@@ -30,12 +38,14 @@ if __name__ == "__main__":
     DIAMOND = 1
     TUD = 2
     HOVER = 3
+    RRT = 4
 
     NONLINEAR = 0
     LINEAR = 1
 
-    traj = DIAMOND
-    controller = MPC
+    traj = RRT
+    controller = NONLINEAR
+
     if traj == CIRCLE:
         T=9
         trajectory = CircleTrajectory(dt, radius=5, end_z=2.5, T=T)
@@ -48,6 +58,18 @@ if __name__ == "__main__":
     elif traj == HOVER:
         T=3
         trajectory = HoverTrajectory(dt, hoverHeight=5, T=T)
+    elif traj == RRT:
+        grid = GridMap(100,100,100)
+        grid.addObstacles(25,25,25, radius=10)
+        grid.addObstacles(70,70,70, radius=10)
+        grid.addObstacles(50,50,50, radius=10)
+        startConfig = Configuration(0,0,0)
+        planner = RRTPlanner(grid)
+        goalConfig = Configuration(80,80,80, np.pi)
+        traj = planner.getTrajectory(startConfig, goalConfig)
+        resolution = 0.1
+        list_traj = [(point.pos.x * resolution, point.pos.y * resolution, point.pos.z * resolution ) for point in traj]
+        trajectory = CustomTrajectory(dt, list_traj, T=20, name="Custom")
 
     ctrl_type = "Non-linear Controller"
 
@@ -56,8 +78,6 @@ if __name__ == "__main__":
     elif controller == LINEAR:
         controller = LinearPDController()
         ctrl_type = "Linear Controller"
-    elif controller == MPC:
-        controller = MPCController()
     
     ax.set_title(f"Following {trajectory.getName()} trajectory with {ctrl_type}")
 
