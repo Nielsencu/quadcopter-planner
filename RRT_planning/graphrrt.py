@@ -3,6 +3,7 @@ import time
 from typing import List, Set
 import math
 from dataclasses import dataclass
+import matplotlib.pyplot as plt
 
 class Graph:
     def __init__(self):
@@ -173,11 +174,12 @@ class RRTPlanner:
                 closestVertex=vertex
         return closestVertex
         
-    def getTrajectory(self, start: Configuration, goal: Configuration, ax=None) -> List[Configuration]:
+    def getTrajectory(self, start: Configuration, goal: Configuration, fig=None, ax=None) -> List[Configuration]:
         timeStart = time.time()
         nodesCount = 0
         graph = Graph()
         graph.addVertex(start)
+        
         while time.time() - timeStart < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
             q = Configuration.getRandomConfiguration(lowBound=0, highBound=self.map.xMax)
             nodesCount +=1
@@ -190,11 +192,16 @@ class RRTPlanner:
             q = segment[-1]
             graph.addVertex(q)
             if ax is not None:
+                # fig.canvas.restore_region(background)
                 # TODO: Real-time plotting? Use blit to cache background and avoid redrawing
                 x = np.array([point.pos.x * 0.1 for point in segment])
                 y = np.array([point.pos.y * 0.1 for point in segment])
                 z = np.array([point.pos.z * 0.1 for point in segment])
-                ax.plot(x, y, z, '-b')
+                ax.plot(x,y,z, '-b')
+                plt.pause(0.02)
+                # points.set_data(x,y,z)
+                # ax.draw_artist(points)
+                # fig.canvas.blit(ax.bbox)
             graph.addLink(qPrime, q)
             err = q.getError(goal)
             if err < self.goalErrorMargin:

@@ -68,6 +68,11 @@ if __name__ == "__main__":
         goalConfig = Configuration(80,80,80, np.pi)
         traj = planner.getTrajectory(startConfig, goalConfig)
         resolution = 0.1
+        x, y, z = grid.getMap().nonzero()
+        x = x * resolution
+        y = y * resolution
+        z = z * resolution
+        ax.scatter(x,y,z,c=z, alpha=1)
         list_traj = [(point.pos.x * resolution, point.pos.y * resolution, point.pos.z * resolution ) for point in traj]
         trajectory = CustomTrajectory(dt, list_traj, T=20, name="Custom")
 

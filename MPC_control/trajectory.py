@@ -64,7 +64,6 @@ class CustomTrajectory(Trajectory):
         self.t = t
         if self.t < self.T:
             waypoint = int(self.t // self.timeEachWaypoint)
-            print("Currently at waypoint ", waypoint, " max length is ", len(self.traj))
             if waypoint >= len(self.traj) - 1:
                 vel = np.array([0,0,0])
                 acc = np.array([0,0,0])
