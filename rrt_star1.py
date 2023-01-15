@@ -143,6 +143,7 @@ class RRTPlanner:
         lowestcostvertex = None
         #TODO: Find maximum of minimum distance according to map size instead o inf
         minCost = math.inf
+        radius = math.inf 
         for vertex in vertices:
             #TODO: Implement closest neighbor with yaw, currently only with L2 distance of xyz
             # check neighbors within radius of the new point and check which one has 
@@ -151,7 +152,7 @@ class RRTPlanner:
             # This can maybe be done in the similar way of the .parent but then .cost
             dist = (vertex.pos.getL2(q.pos))
 
-            if  dist != 0:
+            if  dist != 0 and dist < radius:
                 if vertex.cost + dist < minCost:
                     minCost = vertex.cost + dist
                     lowestcostvertex = vertex   
@@ -163,6 +164,9 @@ class RRTPlanner:
         nodesCount = 0
         vertices.add(start)
         start.cost = 0
+        path = []
+        shortest_path =[]
+        CurrentShortestPath = math.inf
         while time.time() - timeStart < self.maxTimeTaken and nodesCount < self.maxNodesExpanded:
             q = Configuration.getRandomConfiguration()
             nodesCount +=1
@@ -197,10 +201,30 @@ class RRTPlanner:
                 path.append(q)
                 q = q.parent
             path.append(q)
-            if q.pos.getL2(start.pos)  < self.startErrorMargin:
-                print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
-                return path
-        print("Failed to find path")
-        return []
+            
+            #getting the shortest path yet
+            
+            PreviousShortestPath = CurrentShortestPath
+            current_path_len = 0
+            
+            for i in range(len(path)-1):
+                    current_path_len +=  path[i].pos.getL2(path[i+1].pos) 
+                    
+            if current_path_len < PreviousShortestPath and q.pos.getL2(start.pos)  < self.startErrorMargin:
+                CurrentShortestPath = current_path_len
+                shortest_path = path
+            elif current_path_len < PreviousShortestPath: 
+                CurrentShortestPath = current_path_len
+                shortest_path = shortest_path
+            else:
+                CurrentShortestPath = PreviousShortestPath
+                shortest_path = shortest_path
+                
+        if shortest_path:
+            print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
+            return shortest_path
+        else:
+            print("Failed to find path")
+            return []
     
     #possible_vertices = ("f",[possible_vertices])
