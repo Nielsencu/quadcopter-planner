@@ -254,8 +254,8 @@ class RRTPlanner:
                 shortest_path = shortest_path
                 
         if shortest_path:
-                print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
-                return shortest_path
+            print(f'Number of nodes expanded {nodesCount} and time taken {time.time() - timeStart}')
+            return shortest_path
         else:
             print("Failed to find path")
             return []
