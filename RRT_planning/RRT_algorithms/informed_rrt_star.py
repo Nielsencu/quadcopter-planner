@@ -26,7 +26,6 @@ from typing import List, Set
 import math
 from dataclasses import dataclass
 
-CONNECTOR_LENGTH = 5
 @dataclass
 class Point3D:
     x : int
@@ -114,13 +113,14 @@ class GridMap:
                         self.flagAsOccupied(point)
                 
 class RRTPlanner:
-    def __init__(self, map : GridMap, maxTimeTaken=4, maxNodesExpanded=10000):
+    def __init__(self, map : GridMap, maxTimeTaken=4, maxNodesExpanded=10000, connectorLength = 5):
         self.map = map
         self.maxTimeTaken = maxTimeTaken #in informed rrt, maxtime is maxtimetaken -3
         # TODO: Bug when error margin is 75, won't find path
         self.startErrorMargin = 3 * (5**2)
         self.goalErrorMargin = 3 * (5**2)
         self.maxNodesExpanded = maxNodesExpanded
+        self.connectorLength = connectorLength
         print(f'Initialized RRT Planner with\nstartErrorMargin {self.startErrorMargin}\ngoalErrorMargin {self.goalErrorMargin}\nmaxTimeTaken {self.maxTimeTaken}\nmaxNodesExpanded {self.maxNodesExpanded}')
         
     def getBoundedConfiguration(self, start: Configuration, goal: Configuration, path, path_len_min, CurrentShortestPath) -> List[Configuration]: 
@@ -160,7 +160,7 @@ class RRTPlanner:
         discretizedLine = []
         DISCRETIZATION = 10
         for l in np.linspace(0,1,DISCRETIZATION,endpoint=True):
-            segmentLength = min(vMag, CONNECTOR_LENGTH)
+            segmentLength = min(vMag, self.connectorLength)
             x = start.x  + int(l * segmentLength * u.x)
             y = start.y + int(l * segmentLength * u.y)
             z = start.z + int(l * segmentLength * u.z)

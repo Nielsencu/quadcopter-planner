@@ -30,7 +30,6 @@ class Graph:
         self.adjacentList[src].append(dest)
 
 
-CONNECTOR_LENGTH = 2
 @dataclass
 class Point3D:
     x : int
@@ -142,13 +141,14 @@ class InformedRRTStarPlanner:
     def __init__(self):
         ...
 class RRTPlanner:
-    def __init__(self, map : GridMap, maxTimeTaken=10, maxNodesExpanded=10000):
+    def __init__(self, map : GridMap, maxTimeTaken=10, maxNodesExpanded=10000, connectorLength = 5):
         self.map = map
         self.maxTimeTaken = maxTimeTaken
         # TODO: Bug when error margin is too small, takes too long to find solution.
-        self.startErrorMargin = 3 * (5**2)
-        self.goalErrorMargin = 3 * (5**2)
+        self.startErrorMargin = 4 * (5**2)
+        self.goalErrorMargin = 4 * (5**2)
         self.maxNodesExpanded = maxNodesExpanded
+        self.connectorLength = connectorLength
         print(f'Initialized RRT Planner with\nstartErrorMargin {self.startErrorMargin}\ngoalErrorMargin {self.goalErrorMargin}\nmaxTimeTaken {self.maxTimeTaken}\nmaxNodesExpanded {self.maxNodesExpanded}')
         
     def steering(self, q1 : Configuration, q2: Configuration) -> List[Configuration]:
@@ -160,7 +160,7 @@ class RRTPlanner:
         start = q1.pos
         discretizedLine = []
         DISCRETIZATION = 10
-        segmentLength = min(vMag, CONNECTOR_LENGTH)
+        segmentLength = min(vMag, self.connectorLength)
         for progress in np.linspace(0,segmentLength,DISCRETIZATION,endpoint=True):
             x = start.x  + int(progress * u.x)
             y = start.y + int(progress * u.y)
