@@ -19,7 +19,10 @@ def getCubicSpline(path, T):
     tResampled = np.linspace(0, T, int(T/0.01))
     
     def getPosVelAccFromCubicSpline(arr):
-        f = scipy.interpolate.CubicSpline(tArr, arr, bc_type='clamped')
+        try:
+            f = scipy.interpolate.CubicSpline(tArr, arr, bc_type='clamped')
+        except:
+            return [], [], []
         pos = f(tResampled)
         vel = f(tResampled, 1)
         acc = f(tResampled, 2)
