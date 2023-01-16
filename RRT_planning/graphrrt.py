@@ -30,7 +30,7 @@ class Graph:
         self.adjacentList[src].append(dest)
 
 
-CONNECTOR_LENGTH = 5
+CONNECTOR_LENGTH = 2
 @dataclass
 class Point3D:
     x : int
