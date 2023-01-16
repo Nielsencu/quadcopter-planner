@@ -125,6 +125,13 @@ class GridMap:
                     point.z = z + z_inc
                     if point.getL2(original) < max_l2:
                         self.flagAsOccupied(point)
+
+    def addRectangle(self, x, y, z, width=1, height=1, depth=1):
+        for x_inc in range(x - int(width/2), x + int(width/2)):
+            for y_inc in range(y - int(height/2), y + int(height/2)):
+                for z_inc in range(z - int(depth/2), z + + int(depth/2)):
+                    point = Point3D(x_inc, y_inc, z_inc)
+                    self.flagAsOccupied(point)
                 
 class RRTStarPlanner:
     # TODO: Extend Vanilla RRT and Implement RRTStar with rewiring

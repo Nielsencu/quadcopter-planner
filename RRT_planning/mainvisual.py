@@ -1,4 +1,4 @@
-from rrt_max import RRTPlanner, GridMap, Configuration
+from RRT_algorithms.rrt_max import RRTPlanner, GridMap, Configuration
 import matplotlib.pyplot as plt
 import numpy as np
 import math
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     shortestpathliststar = shortestpathliststar[:,1:nodes_countinitstar]
     
     
-from informed_rrt_star import RRTPlanner, GridMap, Configuration
+from RRT_algorithms.informed_rrt_star import RRTPlanner, GridMap, Configuration
 import matplotlib.pyplot as plt
 import numpy as np
 

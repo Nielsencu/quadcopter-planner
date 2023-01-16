@@ -1,4 +1,4 @@
-from graphrrt import RRTPlanner, GridMap, Configuration
+from RRT_algorithms.graphrrt import RRTPlanner, GridMap, Configuration
 import matplotlib.pyplot as plt
 import numpy as np
 
