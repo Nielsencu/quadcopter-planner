@@ -1,0 +1,10 @@
+gym
+control
+scipy
+cvxpy
+numpy
+matplotlib
+jupyter
+notebook
+ipykernel
+jupyterlab
