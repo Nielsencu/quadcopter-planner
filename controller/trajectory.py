@@ -11,6 +11,19 @@ def tj_from_line(start_pos, end_pos, time_ttl, t_c):
         pos = end_pos - (time_ttl-t_c) * vel/2
     return pos
 
+def divideTimeFromPath(path, T):
+    totalWaypoints = len(path)
+    distanceList = []
+    for i in range(totalWaypoints-1):
+        distance = np.linalg.norm(path[totalWaypoints-1-i, :] - path[totalWaypoints-i-2, :])
+        distanceList.append(distance)
+        
+    tArr = np.zeros(totalWaypoints)
+    for i in range(totalWaypoints-1):
+        tArr[i] = sum(distanceList[0:i]) / sum(distanceList) * T
+    tArr[totalWaypoints-1] = T
+    return tArr
+
 class Trajectory:
     def __init__(self, dt):
         self.t = 0
@@ -52,26 +65,49 @@ class HoverTrajectory(Trajectory):
         acc = np.clip(acc, -1, 1) # Limit max acc
         return self.pack_state_as_dict(pos, vel, acc, 0,0)
     
+class PosVelAccTrajectory(Trajectory):
+    def __init__(self, dt, pos, vel, acc, T=30, name=""):
+        super().__init__(dt)
+        self.name = name
+        self.pos = pos
+        self.vel = vel
+        self.acc = acc
+        self.T = T
+        
+    def getDesState(self, t):
+        self.t = t
+        if self.t < self.T:
+            self.waypointIndex = int(t // self.dt)
+            return self.pack_state_as_dict(self.pos[self.waypointIndex], self.vel[self.waypointIndex], self.acc[self.waypointIndex], 0, 0)
+        elif self.t >= self.T:
+            vel = np.array([0,0,0])
+            acc = np.array([0,0,0])
+            end_pos = np.array(self.pos[-1])
+            return self.pack_state_as_dict(end_pos, vel, acc, 0,0)
+            
+    
 class CustomTrajectory(Trajectory):
     def __init__(self, dt, traj, T=5, name="Custom"):
         super().__init__(dt)
         self.T = T
         self.name = name
         self.traj = traj
-        self.timeEachWaypoint = self.T / len(self.traj)
+        self.tArr = divideTimeFromPath(traj, T)
+        self.waypointIndex = 0
     
     def getDesState(self, t):
         self.t = t
         if self.t < self.T:
-            waypoint = int(self.t // self.timeEachWaypoint)
-            if waypoint >= len(self.traj) - 1:
+            if self.t > self.tArr[self.waypointIndex]:
+                self.waypointIndex +=1
+            if self.waypointIndex >= len(self.traj) - 1:
                 vel = np.array([0,0,0])
                 acc = np.array([0,0,0])
                 end_pos = np.array(self.traj[-1])    
                 return self.pack_state_as_dict(end_pos, vel, acc, 0,0)    
-            start_pos = np.array(self.traj[waypoint])
-            end_pos = np.array(self.traj[waypoint+1])   
-            t_c = self.t - waypoint * self.timeEachWaypoint         
+            start_pos = np.array(self.traj[self.waypointIndex])
+            end_pos = np.array(self.traj[self.waypointIndex+1])   
+            t_c = self.t - (self.tArr[self.waypointIndex+1] - self.tArr[self.waypointIndex])
         elif self.t >= self.T:
             vel = np.array([0,0,0])
             acc = np.array([0,0,0])
